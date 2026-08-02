@@ -1,0 +1,84 @@
+# Render blueprint: deploys the API, the MCP server and the frontend as public URLs,
+# with a managed Postgres. Qdrant is not offered by Render, so QDRANT_URL/QDRANT_API_KEY
+# point at a Qdrant Cloud cluster (the free tier is sufficient for this workload).
+#
+# Deploy:
+#   1. Create a Qdrant Cloud cluster; note its URL and API key.
+#   2. In Render: New > Blueprint, point at this repository.
+#   3. Fill the values marked sync:false when prompted (they are never committed).
+#
+# Both Python services run the same image with different start commands, exactly as in
+# docker-compose, so local and deployed behaviour cannot diverge.
+
+databases:
+  - name: kb-postgres
+    databaseName: kb
+    user: kb
+    plan: basic-256mb
+
+services:
+  - type: web
+    name: kb-api
+    runtime: docker
+    plan: starter
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /healthz
+    dockerCommand: >-
+      sh -c "alembic upgrade head &&
+             uvicorn kb.api.main:app --host 0.0.0.0 --port $PORT"
+    disk:
+      name: uploads
+      mountPath: /data/uploads
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: { name: kb-postgres, property: connectionString }
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: MCP_API_KEY
+        sync: false
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        fromService: { name: kb-frontend, type: web, property: host }
+      - key: STORAGE_DIR
+        value: /data/uploads
+
+  - type: web
+    name: kb-mcp
+    runtime: docker
+    plan: starter
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /healthz
+    dockerCommand: uvicorn kb.mcp_server.server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: { name: kb-postgres, property: connectionString }
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: MCP_API_KEY
+        sync: false
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      # Render terminates TLS in front of the container, so the Host header is the
+      # public domain. '*' keeps the transport's DNS-rebinding check out of the way;
+      # tighten it to the service's own domain once that domain is known.
+      - key: MCP_ALLOWED_HOSTS
+        value: "*"
+
+  - type: web
+    name: kb-frontend
+    runtime: docker
+    plan: starter
+    dockerContext: ./frontend
+    dockerfilePath: ./frontend/Dockerfile
+    envVars:
+      # Baked into the client bundle at build time, so it must be the public API URL.
+      - key: NEXT_PUBLIC_API_URL
+        fromService: { name: kb-api, type: web, property: host }

@@ -1,0 +1,107 @@
+NORTHGATE FINANCIAL SERVICES
+HR HELPDESK — FREQUENTLY ASKED QUESTIONS
+Export generated from the HR knowledge base. Last updated: March 2025.
+
+1. PAY AND PAYROLL
+
+1.1 When am I paid?
+Salary is paid monthly on the 27th. If the 27th falls on a weekend or a public holiday,
+payment is made on the preceding working day. Payslips appear in the HR portal within 48
+hours of the payment date.
+
+1.2 My payslip looks wrong. What do I do?
+Raise a payroll query in the HR portal within 10 working days of the payment date.
+Corrections confirmed before the 15th of a month are paid in that month's run; anything
+later is paid in the following run. Underpayments above EUR 500 can be paid off-cycle on
+request.
+
+1.3 How do I change my bank details?
+Update them yourself in the HR portal. Changes made after the 15th of the month take
+effect the following month, because payroll is locked from the 16th. You will receive a
+confirmation email to your personal address as an anti-fraud check.
+
+2. LEAVE AND ABSENCE
+
+2.1 How much annual leave do I get?
+25 days per year plus public holidays, accrued monthly. Part-time employees accrue pro
+rata.
+
+2.2 Can I carry leave into next year?
+Up to 5 unused days may be carried over. Carried days expire on 31 March; there is no
+payment in lieu for days that expire.
+
+2.3 How much notice do I give for annual leave?
+Two weeks for absences longer than three days; shorter absences need your manager's
+agreement but no formal notice period. Requests during the year-end close period
+(15 December to 5 January) need approval from your department head.
+
+2.4 What do I do if I am sick?
+Tell your manager before 09:30 on the first day of absence and log the absence in the HR
+portal. A medical certificate is required from the fourth consecutive day of absence.
+
+2.5 What parental leave is available?
+Maternity leave is five months at full pay. Paternity and second-parent leave is 20
+working days at full pay, to be taken within six months of the birth or placement.
+Shared parental arrangements are available; contact People Operations to model the
+options before you decide.
+
+3. WORKING ARRANGEMENTS
+
+3.1 How many days do I work from the office?
+Three days per week, with Tuesday and Thursday as team anchor days. Some roles are fully
+remote by written agreement.
+
+3.2 Can I work from another country temporarily?
+Yes, for up to 20 working days per calendar year, in a country where the firm has a legal
+entity or a recognised arrangement. It must be approved in advance by your manager and by
+Tax, because working abroad can create a tax presence for the firm.
+
+3.3 Can I change my working hours?
+Flexible working requests are made in the HR portal. People Operations responds within 30
+days. Changes to contracted hours are a contract variation and are confirmed in writing.
+
+4. EXPENSES AND EQUIPMENT
+
+4.1 What is the expense deadline?
+Submit within 60 days of the spend. Itemised receipts are required for anything above
+EUR 25. Approved claims are reimbursed in the next payroll run.
+
+4.2 What travel can I book?
+Economy class for flights under six hours, premium economy above six hours. Rail is
+preferred over air for journeys under four hours. All travel above EUR 1,500 needs
+department head approval before booking.
+
+4.3 My laptop is broken. Who do I contact?
+The IT service desk at itsupport@northgate.example. Loan devices are available from
+Facilities in the Milan office; remote employees are couriered a replacement within two
+business days.
+
+5. PERFORMANCE AND DEVELOPMENT
+
+5.1 How does the review cycle work?
+There are two formal reviews per year: a mid-year check-in in June and a full review in
+December. Objectives are set in January and may be revised at the mid-year point.
+
+5.2 How long is probation?
+Six months for permanent employees, with formal reviews at 30, 60 and 90 days. Notice
+during probation is one month from either side.
+
+5.3 What is the training budget?
+EUR 1,500 per employee per year for external training, plus unlimited access to the
+internal learning platform. Requests go to your manager, and anything leading to a
+professional qualification also needs department head approval.
+
+6. LEAVING THE FIRM
+
+6.1 What notice do I have to give?
+Three months for permanent employees after probation, one month during probation. Senior
+roles may have a longer notice period stated in the contract.
+
+6.2 What happens to my unused leave?
+Accrued but untaken leave for the current year is paid in the final payroll run. Carried-
+over days from the previous year are not paid.
+
+6.3 When do I lose system access?
+Access is revoked at 18:00 on your last working day. Export anything you personally need,
+such as payslips and P60-equivalent documents, before then; People Operations can provide
+copies afterwards on request.
