@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Nav } from "./nav";
 
 export const metadata: Metadata = {
-  title: "Document Intelligence — Knowledge Base",
-  description: "Upload, tag and manage the documents exposed to AI agents via MCP.",
+  title: "Document Intelligence: Knowledge Base",
+  description:
+    "Ask questions in natural language, and manage the documents the assistant searches.",
 };
 
 export default function RootLayout({
@@ -15,11 +17,14 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <header className="header">
-          <h1>Document Intelligence</h1>
-          <p>
-            Documents uploaded here are chunked, embedded and exposed to AI agents
-            through the MCP server.
-          </p>
+          <div>
+            <h1>Document Intelligence</h1>
+            <p>
+              Ask questions in plain language. Answers are grounded in the uploaded
+              documents and retrieved through the MCP server.
+            </p>
+          </div>
+          <Nav />
         </header>
         <main className="container">{children}</main>
       </body>

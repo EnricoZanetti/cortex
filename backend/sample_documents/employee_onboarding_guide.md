@@ -1,6 +1,6 @@
 # New Employee Onboarding Guide
 
-Northgate Financial Services — People Operations
+Northgate Financial Services: People Operations
 Applies to all permanent and fixed-term employees joining after 1 January 2025.
 
 ## Before your first day
@@ -29,7 +29,7 @@ you must:
 
 1. Set your single sign-on password (minimum 14 characters, not reused from any other
    service).
-2. Enrol two multi-factor authentication methods — the authenticator app is mandatory,
+2. Enrol two multi-factor authentication methods; the authenticator app is mandatory,
    and a hardware key is required for anyone with production access.
 3. Install the device management agent, which is what allows you to reach internal
    systems.
@@ -99,7 +99,7 @@ certificate is required from the fourth consecutive day.
 
 ## Who to contact
 
-- People Operations — contracts, pay, leave, benefits: peopleops@northgate.example
-- IT service desk — accounts, hardware, access: itsupport@northgate.example
-- Compliance — training, policy questions, conflicts of interest: compliance@northgate.example
-- Facilities — badges, desks, office access: facilities@northgate.example
+- People Operations, for contracts, pay, leave and benefits: peopleops@northgate.example
+- IT service desk, for accounts, hardware and access: itsupport@northgate.example
+- Compliance, for training, policy questions and conflicts of interest: compliance@northgate.example
+- Facilities, for badges, desks and office access: facilities@northgate.example

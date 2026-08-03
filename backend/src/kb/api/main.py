@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from kb.api.deps import get_vector_store
-from kb.api.routers import documents, health, tags
+from kb.api.routers import chat, documents, health, tags
 from kb.api.schemas import ErrorOut
 from kb.config import get_settings
 from kb.logging import configure_logging, get_logger
@@ -39,7 +39,7 @@ def create_app() -> FastAPI:
     """Application factory."""
     settings = get_settings()
     app = FastAPI(
-        title="Document Intelligence — Management API",
+        title="Document Intelligence: Management API",
         description=(
             "Upload, tag, list and delete documents in the knowledge base. "
             "AI agents query the same knowledge base through the MCP server."
@@ -58,6 +58,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(documents.router)
     app.include_router(tags.router)
+    app.include_router(chat.router)
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:

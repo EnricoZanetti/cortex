@@ -1,4 +1,4 @@
-# Northgate Vault — Product Manual
+# Northgate Vault: Product Manual
 
 Product: Northgate Vault (custody and portfolio reporting platform)
 Release 4.6 · Audience: relationship managers and client operations
@@ -38,9 +38,9 @@ can reissue it from the client record.
 
 Every Vault user has one of three entitlement levels:
 
-- **Viewer** — read-only access to positions and reports.
-- **Instructor** — may prepare instructions but not release them.
-- **Approver** — may release instructions up to the client's mandated limit.
+- **Viewer**: read-only access to positions and reports.
+- **Instructor**: may prepare instructions but not release them.
+- **Approver**: may release instructions up to the client's mandated limit.
 
 Dual authorisation is mandatory for any cash movement: an Instructor prepares and a
 different Approver releases. A single user can never hold both roles on the same

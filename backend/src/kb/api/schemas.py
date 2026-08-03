@@ -85,6 +85,29 @@ class DeleteOut(BaseModel):
     document_id: uuid.UUID
 
 
+class ChatModelOut(BaseModel):
+    """One selectable chat model, with the reason it is unusable when it is."""
+
+    id: str
+    label: str
+    provider: str
+    provider_label: str
+    description: str
+    available: bool = Field(description="False when the provider's API key is not configured.")
+    requires_env_var: str = Field(
+        description="Environment variable that supplies this provider's API key."
+    )
+
+
+class ChatModelsOut(BaseModel):
+    """The model picker's contents."""
+
+    models: list[ChatModelOut]
+    default: str | None = Field(
+        default=None, description="Id to preselect; null when no provider is configured."
+    )
+
+
 class HealthOut(BaseModel):
     """Liveness/readiness of the service and its dependencies."""
 
@@ -93,6 +116,7 @@ class HealthOut(BaseModel):
     vector_store: str
     documents: int | None = None
     vectors: int | None = None
+    chat_models_available: int = 0
 
 
 class ErrorOut(BaseModel):
@@ -100,3 +124,12 @@ class ErrorOut(BaseModel):
 
     error: str
     detail: str | None = None
+
+
+class ChatHealthOut(BaseModel):
+    """Whether the chat assistant can reach the MCP server, and with which tools."""
+
+    mcp_server: str
+    mcp_server_url: str
+    tools: list[str]
+    models_available: int

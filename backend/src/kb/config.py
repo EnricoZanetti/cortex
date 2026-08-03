@@ -50,7 +50,9 @@ class Settings(BaseSettings):
     )
     openai_api_key: SecretStr = Field(
         default=SecretStr(""),
-        description="Required when embedding_provider='openai'.",
+        description=(
+            "Required when embedding_provider='openai'. Also enables the OpenAI chat models."
+        ),
     )
     embedding_model: str = Field(default="text-embedding-3-small")
     embedding_dimensions: int = Field(default=1536, ge=64, le=4096)
@@ -81,6 +83,31 @@ class Settings(BaseSettings):
     storage_dir: str = Field(
         default="/data/uploads",
         description="Where original uploaded files are kept (for re-processing and download).",
+    )
+
+    # --- Chat assistant ------------------------------------------------------------
+    # One key per provider. A provider with no key simply has its models greyed out in
+    # the picker, so the app runs with any subset of these configured (including none).
+    anthropic_api_key: SecretStr | None = Field(
+        default=None, description="Enables the Claude chat models."
+    )
+    google_api_key: SecretStr | None = Field(
+        default=None, description="Enables the Gemini chat models."
+    )
+    chat_max_tool_iterations: int = Field(
+        default=8,
+        ge=1,
+        le=25,
+        description=("Safety valve on the agent loop: rounds of tool calls allowed per question."),
+    )
+    chat_max_output_tokens: int = Field(default=4096, ge=256, le=32000)
+    mcp_server_url: str = Field(
+        default="http://localhost:8080/mcp",
+        description=(
+            "Where the chat agent reaches the MCP server. The assistant is a normal MCP "
+            "client: it goes over HTTP with the same bearer token any other client uses, "
+            "rather than importing the tools directly."
+        ),
     )
 
     # --- MCP server --------------------------------------------------------------

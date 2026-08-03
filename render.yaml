@@ -42,6 +42,16 @@ services:
         sync: false
       - key: QDRANT_API_KEY
         sync: false
+      # Chat providers. Set whichever you want available; the picker greys out
+      # the rest rather than failing.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      # The assistant reaches the MCP server as an ordinary client, so it needs
+      # the deployed MCP service's public URL.
+      - key: MCP_SERVER_URL
+        fromService: { name: kb-mcp, type: web, property: host }
       - key: CORS_ORIGINS
         fromService: { name: kb-frontend, type: web, property: host }
       - key: STORAGE_DIR

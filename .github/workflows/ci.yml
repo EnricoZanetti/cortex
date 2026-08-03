@@ -33,6 +33,9 @@ jobs:
       DATABASE_URL: postgresql+psycopg://kb:kb@localhost:5432/kb
       QDRANT_URL: http://localhost:6333
       STORAGE_DIR: /tmp/kb-uploads
+      # No MCP server runs in CI, so the chat integration tests skip themselves.
+      # Everything else in the chat layer is covered without one.
+      MCP_SERVER_URL: http://127.0.0.1:1/mcp
 
     defaults:
       run:

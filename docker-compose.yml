@@ -46,7 +46,14 @@ services:
       QDRANT_COLLECTION: ${QDRANT_COLLECTION:-kb_chunks}
       MCP_API_KEY: ${MCP_API_KEY:?MCP_API_KEY must be set in .env}
       # Optional: only required when EMBEDDING_PROVIDER=openai, which the app enforces.
+      # Also serves the OpenAI chat models.
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Chat providers. Any subset may be set; unset ones are greyed out in the picker.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      MCP_SERVER_URL: ${MCP_SERVER_URL:-http://mcp:8080/mcp}
+      CHAT_MAX_TOOL_ITERATIONS: ${CHAT_MAX_TOOL_ITERATIONS:-8}
+      CHAT_MAX_OUTPUT_TOKENS: ${CHAT_MAX_OUTPUT_TOKENS:-4096}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openai}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1536}

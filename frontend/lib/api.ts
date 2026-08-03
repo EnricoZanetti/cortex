@@ -95,3 +95,94 @@ export function deleteDocument(id: string): Promise<{ deleted: boolean }> {
 export function reprocessDocument(id: string): Promise<Document> {
   return request<Document>(`/documents/${id}/reprocess`, { method: "POST" });
 }
+
+/* ------------------------------------------------------------------ chat */
+
+export interface ChatModel {
+  id: string;
+  label: string;
+  provider: string;
+  provider_label: string;
+  description: string;
+  available: boolean;
+  requires_env_var: string;
+}
+
+export interface ChatModelList {
+  models: ChatModel[];
+  default: string | null;
+}
+
+export interface Citation {
+  filename: string | null;
+  heading_path: string | null;
+  page: number | null;
+  document_id: string | null;
+  chunk_id: string | null;
+  relevance: number | null;
+}
+
+/** Events streamed by POST /chat, mirroring kb.agent.events. */
+export type ChatEvent =
+  | { type: "text"; text: string }
+  | { type: "tool_call"; name: string; arguments: Record<string, unknown> }
+  | {
+      type: "tool_result";
+      name: string;
+      is_error: boolean;
+      result_count: number | null;
+      citations: Citation[];
+      guidance: string | null;
+    }
+  | { type: "error"; message: string }
+  | { type: "done"; stop_reason: string | null };
+
+export function listChatModels(): Promise<ChatModelList> {
+  return request<ChatModelList>("/chat/models");
+}
+
+/**
+ * Stream one chat turn.
+ *
+ * Uses fetch + a ReadableStream rather than EventSource because EventSource
+ * cannot issue a POST, and the conversation history has to go in the body.
+ */
+export async function* streamChat(
+  model: string,
+  messages: { role: string; content: string }[],
+  signal?: AbortSignal,
+): AsyncGenerator<ChatEvent> {
+  const response = await fetch(`${API_URL}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model, messages }),
+    signal,
+  });
+
+  if (!response.ok || !response.body) {
+    throw new Error(`Chat request failed: ${response.status} ${response.statusText}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    // SSE frames are separated by a blank line; keep any partial frame buffered.
+    const frames = buffer.split("\n\n");
+    buffer = frames.pop() ?? "";
+    for (const frame of frames) {
+      const line = frame.split("\n").find((l) => l.startsWith("data: "));
+      if (!line) continue;
+      try {
+        yield JSON.parse(line.slice(6)) as ChatEvent;
+      } catch {
+        /* ignore a frame we cannot parse rather than killing the stream */
+      }
+    }
+  }
+}

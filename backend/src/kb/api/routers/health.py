@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
+from kb.agent.catalog import MODELS, is_available
 from kb.api.deps import get_vector_store
 from kb.api.schemas import HealthOut
 from kb.db.models import Document
@@ -16,7 +17,13 @@ router = APIRouter(tags=["health"])
 
 @router.get("/healthz", response_model=HealthOut)
 def healthz(response: Response, session: Session = Depends(get_db)) -> HealthOut:
-    """Report readiness of Postgres and Qdrant. Returns 503 if either is unreachable."""
+    """Report readiness of the API's own dependencies: Postgres and Qdrant.
+
+    Deliberately does *not* reach out to the MCP server. This endpoint backs the
+    container healthcheck, and the MCP container waits for the API to be healthy
+    before starting, so probing it here would deadlock the stack on a cold boot.
+    The chat assistant's view of the MCP server lives at ``GET /chat/health``.
+    """
     database = "ok"
     vector_store = "ok"
     documents: int | None = None
@@ -44,4 +51,5 @@ def healthz(response: Response, session: Session = Depends(get_db)) -> HealthOut
         vector_store=vector_store,
         documents=documents,
         vectors=vectors,
+        chat_models_available=sum(1 for model in MODELS if is_available(model)),
     )

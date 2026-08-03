@@ -9,10 +9,14 @@ language, grounded in the actual documents, with citations.
 
 ```
 ┌────────────────┐      REST       ┌──────────────────────────────┐
-│  Next.js UI    │ ──────────────▶ │  FastAPI  (management plane) │
-│  upload · tag  │                 │  /documents  /tags  /healthz │
-│  list · delete │ ◀────────────── │  ingestion pipeline          │
+│  Next.js UI    │ ──────────────▶ │  FastAPI                     │
+│  Ask (chat)    │   SSE stream    │  /documents /tags  (manage)  │
+│  Documents     │ ◀────────────── │  /chat             (assist)  │
 └────────────────┘                 └───────────────┬──────────────┘
+                                                   │
+                        the assistant is itself an MCP client:
+                        it calls the tools over HTTP with a bearer
+                        token, exactly as an external agent would
                                                    │
                                      shared `kb` core package
                                                    │
@@ -22,29 +26,35 @@ language, grounded in the actual documents, with citations.
 │  Desktop /curl │ ◀─────────────── │                             │
 └────────────────┘                  └──────────────┬──────────────┘
                                                    │
-                      ┌────────────────────────────┴────────────────────────────┐
-                      │  Postgres: documents, tags, chunks + full-text index     │
-                      │  Qdrant:   chunk embeddings + tag/document payload filters│
-                      └──────────────────────────────────────────────────────────┘
+                      ┌────────────────────────────┴───────────────────────────────┐
+                      │  Postgres: documents, tags, chunks + full-text index       │
+                      │  Qdrant:   chunk embeddings + tag/document payload filters │
+                      └────────────────────────────────────────────────────────────┘
 ```
 
 The API and the MCP server are two processes running **the same image** with different
 start commands, both importing the same `kb` package. Ingestion and retrieval logic exists
 exactly once.
 
+The built-in assistant does **not** shortcut that boundary. It connects to the MCP server
+over Streamable HTTP with the same bearer token any other client uses, so the chat exercises
+the exact surface external agents consume. A weak tool description or a broken auth header
+shows up in our own UI before a customer finds it.
+
 ---
 
 ## Quick start
 
 ```bash
-cp .env.example .env      # then set MCP_API_KEY and OPENAI_API_KEY
+cp .env.example .env      # set MCP_API_KEY, plus at least one LLM provider key
 make up                   # builds and starts all five services
 make seed                 # loads six realistic sample documents
 ```
 
 | What | Where |
 | --- | --- |
-| Frontend | http://localhost:3000 |
+| Ask the knowledge base | http://localhost:3000/chat |
+| Manage documents | http://localhost:3000/documents |
 | API docs (OpenAPI) | http://localhost:8000/docs |
 | MCP endpoint | http://localhost:8080/mcp |
 
@@ -62,10 +72,80 @@ search (see [Offline mode](#offline-mode)). This is also what CI uses.
 
 ---
 
+## The assistant
+
+Employees ask questions at `/chat` and get answers grounded in the documents, with
+citations. The model is theirs to choose.
+
+### Choosing a model
+
+The picker lists models from three providers. Each provider is enabled by one
+environment variable, and **any subset may be configured**: models whose key is
+missing stay in the list, greyed out, labelled with the variable that would enable
+them. Nothing else breaks.
+
+| Provider | Variable | Models |
+| --- | --- | --- |
+| Anthropic | `ANTHROPIC_API_KEY` | Claude Opus 5, Claude Sonnet 5, Claude Haiku 4.5 |
+| OpenAI | `OPENAI_API_KEY` | GPT-5.1, GPT-5 mini (this key also drives embeddings) |
+| Google | `GOOGLE_API_KEY` | Gemini 2.5 Pro, Gemini 2.5 Flash |
+
+Adding a model is a one-line entry in `backend/src/kb/agent/catalog.py`. Adding a
+whole provider is one adapter in `providers.py` implementing a single method.
+
+### Why the assistant goes over HTTP
+
+The obvious implementation imports `RetrievalService` and calls it directly. This one
+opens an MCP session instead, over Streamable HTTP, authenticated with `MCP_API_KEY`.
+
+That costs a network hop and buys two things. The chat becomes a live test of the
+graded surface: the tool descriptions the models read are the ones the MCP server
+serves, not a second copy maintained for the UI, so there is no way for them to drift.
+And the assistant can be pointed at a deployed MCP server by changing one URL.
+
+The same design keeps the providers honest. Each adapter translates the MCP tool
+schemas into its vendor's dialect and runs the tool loop; **none of them rewrites the
+descriptions**. Tool-selection behaviour therefore comes from the tool design, not from
+three separately-tuned prompts.
+
+### What the UI shows
+
+Each turn streams over Server-Sent Events, so tokens appear as they are produced and
+tool calls appear as they happen. Every tool call is rendered as a chip with its
+arguments on hover, and sources are listed under the answer.
+
+That visibility is deliberate: it is how you watch the agent pick `search` for a broad
+question, `list_tags` then `search_by_tag` for a topic-scoped one, and
+`search_by_document` for a follow-up. The tool-design decisions are visible in the UI
+rather than buried in a log.
+
+### Guardrails
+
+- **The agent loop is bounded** by `CHAT_MAX_TOOL_ITERATIONS` (default 8), so a model
+  that keeps calling tools terminates rather than looping.
+- **Nothing raises into the stream.** A failure arrives as an error event the page can
+  render. Provider errors are unwrapped from the MCP transport's nested
+  `ExceptionGroup`s first, so the user sees "the OpenAI account has no remaining quota"
+  rather than "unhandled errors in a TaskGroup".
+- **Tool failures go to the model, not the user.** The tools explain how to recover, and
+  the model can only act on that if it sees the message.
+
+### Checking it works
+
+```bash
+curl -s localhost:8000/chat/health
+```
+
+Reports whether the assistant can reach the MCP server and which tools it found. It is
+deliberately separate from `/healthz`: that endpoint backs the container healthcheck, and
+the MCP container waits on the API, so probing it there would deadlock a cold boot.
+
+---
+
 ## MCP tool design
 
-This is the heart of the project. The tool definitions are the only thing an LLM sees when
-deciding what to call, so they are treated as a product surface, not as glue code.
+The tool definitions are the only thing an LLM sees when
+deciding what to call, so they are treated as a product surface.
 
 ### The tools
 
@@ -87,21 +167,21 @@ below.
 **1. Every description says when *not* to use the tool, and names the alternative.**
 Telling a model what a tool does is easy; the hard part is stopping it reaching for the
 wrong one. So `search_by_tag` says, in as many words, *"do not use this as your first move
-on a general question — narrowing too early is the most common way to miss an answer filed
+on a general question; narrowing too early is the most common way to miss an answer filed
 under a different tag. If this returns nothing, fall back to `search`."* Redirection is the
 single highest-leverage sentence in a tool description.
 
 **2. Three search tools, not one tool with optional filters.**
 The brief specifies this split, and it is also the better interface. A model reliably fills
 in a **required** parameter on a distinctly-named tool. It routinely *omits* an optional
-one — and an omitted `tags` filter fails silently, returning plausible results from the
+one, and an omitted `tags` filter fails silently, returning plausible results from the
 wrong part of the corpus. Making the filter required makes the narrowing decision explicit,
 and makes the name itself carry the intent.
 
 **3. The three search tools return an identical schema.**
 The agent learns one result shape. Switching from `search` to `search_by_tag` costs it
 nothing. Underneath they are one `RetrievalService` call differing only in the filter, so
-the ranking behaviour really is identical — the shared schema is not a convenient fiction.
+the ranking behaviour really is identical; the shared schema is not a convenient fiction.
 
 **4. Every response carries a `guidance` field.**
 An empty result set is the moment an agent is most likely to either give up or invent an
@@ -112,13 +192,13 @@ answer. So the server never returns a bare empty list:
 > query every document instead."*
 
 The guidance also distinguishes *"nothing matched"* from *"the knowledge base is empty"*
-from *"documents are still being processed, retry shortly"* — three situations that call
+from *"documents are still being processed, retry shortly"*: three situations that call
 for three different things to tell the user.
 
 **5. Two scores, because they answer two different questions.**
-Every hit carries `relevance` (normalised against the best hit in *this* result set — for
-comparing results with each other) and `similarity` (raw cosine, absolute — for judging
-whether anything relevant exists at all). This distinction matters: a normalised score
+Every hit carries two scores. `relevance` is normalised against the best hit in *this*
+result set, for comparing results with each other; `similarity` is the raw cosine, absolute,
+for judging whether anything relevant exists at all. This distinction matters: a normalised score
 *cannot* express "nothing here is relevant", because the top hit always scores 1.0 even for
 a query the corpus knows nothing about. When the best absolute similarity is weak, the
 `guidance` says so explicitly and tells the agent to say the knowledge base has no answer
@@ -145,10 +225,10 @@ and can skip approval prompts.
 
 ### Why the two extra tools
 
-- **`get_document_summary`** — lets an agent decide *whether* a document is worth searching,
+- **`get_document_summary`**: lets an agent decide *whether* a document is worth searching,
   and answers "what's in this document?" without spending a retrieval call. The section
   outline is the fastest way to orient in a long policy.
-- **`fetch_chunk_context`** — fixes the classic RAG failure where the answer straddles a
+- **`fetch_chunk_context`**: fixes the classic RAG failure where the answer straddles a
   chunk boundary (a requirement in one chunk, its exception clause in the next). Without
   it, the only remedies are bigger chunks (worse retrieval) or bigger responses (wasted
   context).
@@ -192,7 +272,7 @@ Documents are split **on structure first**, not on character offsets.
    embedding model's own tokenizer, because character budgets produce roughly 2× variance
    in real token length. Small sibling subsections (2.1, 2.2, 2.3) are packed together up
    to that ceiling, but a chunk is **never** grown across a top-level section boundary
-   just to fill the budget. A document of short sections therefore yields short chunks —
+   just to fill the budget. A document of short sections therefore yields short chunks;
    that is the intended behaviour, not a bug.
 
 4. **~120 tokens of overlap** catches answers that straddle a boundary;
@@ -201,7 +281,7 @@ Documents are split **on structure first**, not on character offsets.
 5. **The heading path is prepended to the embedded text.** A chunk reading *"must be
    reported within 24 hours"* is nearly unretrievable in isolation. The same chunk embedded
    as `"AML Policy > 4. Reporting > 4.2 Thresholds\n\nmust be reported within 24 hours"`
-   matches short natural-language queries — and the path doubles as the citation the agent
+   matches short natural-language queries, and the path doubles as the citation the agent
    shows the user.
 
 6. **Runt chunks are merged into a sibling** so no vector is stored for a stray heading.
@@ -209,8 +289,8 @@ Documents are split **on structure first**, not on character offsets.
 ### Embeddings
 
 `text-embedding-3-small` (1536-d). Roughly 5× cheaper than `-large` at close to the same
-retrieval quality on prose like policies and manuals — cheap enough that re-embedding the
-whole corpus after a chunker change is a non-decision. The pipeline depends on an
+retrieval quality on prose like policies and manuals, and cheap enough that re-embedding
+the whole corpus after a chunker change is a non-decision. The pipeline depends on an
 `Embedder` protocol, never on OpenAI directly, so a local model can be substituted by
 implementing two methods.
 
@@ -218,15 +298,15 @@ implementing two methods.
 
 Two retrievers, fused with **Reciprocal Rank Fusion**:
 
-- **Dense** — Qdrant cosine similarity, with tag and document filters applied *inside* the
+- **Dense**: Qdrant cosine similarity, with tag and document filters applied *inside* the
   ANN search. Filtering during search (rather than over-fetching and discarding) is what
   makes `search_by_tag` return a true top-k of the filtered subset instead of progressively
   fewer, worse hits as the filter narrows.
-- **Lexical** — Postgres `tsvector` full-text search over a `GENERATED` column, so the index
+- **Lexical**: Postgres `tsvector` full-text search over a `GENERATED` column, so the index
   cannot drift out of sync with the text.
 
-Why both: financial documents are full of exact identifiers — *MiFID II*, *Form ADV*,
-*EUR 10,000* — where pure semantic search underperforms. Why RRF rather than a weighted
+Why both: financial documents are full of exact identifiers such as *MiFID II*,
+*Form ADV* and *EUR 10,000*, where pure semantic search underperforms. Why RRF rather than a weighted
 score blend: cosine similarity and `ts_rank_cd` are not comparable quantities, and any
 weighting needs recalibration as the corpus grows. RRF uses only each result's *rank within
 its own list*, so both retrievers keep their own scoring semantics and a passage has to do
@@ -234,7 +314,7 @@ well in both to win.
 
 One detail worth calling out, because it was a real bug: the lexical query is built as an
 **OR of the query's lexemes**. Postgres' `websearch_to_tsquery` and `plainto_tsquery` both
-produce an AND, and agents send whole questions — no single passage contains every word of
+produce an AND, and agents send whole questions: no single passage contains every word of
 *"how quickly must I report a suspicious transaction?"*, so the AND matched nothing and
 silently disabled half the hybrid search. With OR semantics, `ts_rank_cd` still ranks
 passages containing more query terms higher.
@@ -251,7 +331,7 @@ re-uploaded, because the guarantee is enforced at three levels:
 | Level | Mechanism | Catches |
 | --- | --- | --- |
 | File | SHA-256 of raw bytes, `UNIQUE` in Postgres | The same file uploaded again. Returns the existing document and **merges any new tags** rather than erroring. |
-| Content | SHA-256 of normalised extracted text | The same document re-exported or re-saved — different bytes, identical content. The upload row is kept (status `duplicate`, linked to the original) so the user can see what happened, but it holds no chunks and no vectors, and is invisible to agents. |
+| Content | SHA-256 of normalised extracted text | The same document re-exported or re-saved: different bytes, identical content. The upload row is kept (status `duplicate`, linked to the original) so the user can see what happened, but it holds no chunks and no vectors, and is invisible to agents. |
 | Chunk | Deterministic `uuid5(document_id, chunk_hash)`, reused as the Qdrant point id | Re-processing. Writes become upserts, so duplicate vectors are structurally impossible rather than merely unlikely. |
 
 Deletion is the mirror image: vectors are removed first (and the delete is aborted if that
@@ -269,8 +349,9 @@ pruned.
 | **Qdrant** | First-class *payload filtering*, which is what makes tag- and document-scoped search correct rather than approximate. Runs as one container locally and has a managed cloud tier. |
 | **Postgres** | Document/tag/chunk metadata, plus the lexical half of the hybrid search. Using one database for both means a delete is transactional, and tag counts are exact. |
 | **`text-embedding-3-small`** | Best quality-per-euro for prose at this scale; swappable behind a protocol. |
-| **Next.js** | The management UI is a handful of screens; App Router + a thin fetch client, no state library. |
-| **uv** | Fast, lockfile-based, reproducible installs — the same lock drives local dev, CI and the Docker image. |
+| **Next.js** | Two screens: ask and manage. App Router plus a thin fetch client, no state library. |
+| **Multi-provider chat** | One adapter per vendor behind a `ChatProvider` protocol, and a model catalogue that is one line per model. An employee picks the model; an operator picks which providers exist by setting keys. |
+| **uv** | Fast, lockfile-based, reproducible installs; the same lock drives local dev, CI and the Docker image. |
 
 ---
 
@@ -293,8 +374,8 @@ curl -X POST http://localhost:8080/mcp \
 
 A static token is the right level here: the client is a trusted internal agent deployment,
 not an end-user browser flow, and it is what every MCP client can send today. Per-user
-authorisation — scoping which documents a given employee's agent may retrieve — is the
-natural next step and would slot in at the same place as a token-to-principal lookup.
+authorisation is the natural next step: scoping which documents a given employee's agent
+may retrieve. It would slot in at the same place, as a token-to-principal lookup.
 
 ---
 
@@ -308,7 +389,7 @@ claude mcp add --transport http kb http://localhost:8080/mcp \
 claude mcp list        # kb: ... - ✔ Connected
 ```
 
-**Claude Desktop** — in `claude_desktop_config.json`:
+**Claude Desktop**, in `claude_desktop_config.json`:
 
 ```json
 {
@@ -322,7 +403,7 @@ claude mcp list        # kb: ... - ✔ Connected
 }
 ```
 
-**curl / Postman** — see the `Authentication` section above, or run `make mcp-check`,
+**curl / Postman**: see the `Authentication` section above, or run `make mcp-check`,
 which walks the full handshake and prints every tool.
 
 ---
@@ -359,22 +440,27 @@ cd ../frontend && npm install && npm run dev          # UI on :3000
 
 `EMBEDDING_PROVIDER=hash` swaps the OpenAI embedder for a deterministic stand-in that needs
 no API key or network. Vectors are then meaningless, so the retrieval service **skips the
-dense retriever entirely** rather than fusing noise into the ranking — search degrades to
+dense retriever entirely** rather than fusing noise into the ranking; search degrades to
 keyword-only, which on a corpus of this size still returns the right passage first. This is
 what CI runs, and it lets a reviewer boot the project before adding credentials.
 
 ### Tests
 
 ```bash
-make test     # 70 tests; integration tests skip if Postgres/Qdrant are down
+make test     # 89 tests; integration tests skip if Postgres/Qdrant/MCP are down
 make lint     # ruff + ruff format + mypy (strict)
 ```
 
 The suite covers chunking boundaries and heading recovery, the three dedup levels, RRF
-ordering, and — importantly — the **MCP tool interface itself**: tool names, required
+ordering, and, importantly, the **MCP tool interface itself**: tool names, required
 parameters, parameter bounds, the presence of sibling-redirection in each description, and
 that the three search tools share one output schema. A refactor that quietly drops a
 description or loosens a bound fails CI.
+
+The chat is tested with a stub provider standing in for the LLM, which lets the rest of the
+turn run for real against a live MCP server: the session, the bearer auth, tool dispatch,
+citation extraction and the event stream. The vendor SDK call is the only part not covered,
+since exercising it would mean spending money on every test run.
 
 ---
 
@@ -382,7 +468,7 @@ description or loosens a bound fails CI.
 
 `render.yaml` is a Render blueprint deploying the API, the MCP server and the frontend as
 public URLs against managed Postgres and a Qdrant Cloud cluster. Both Python services run
-the same image with different start commands — identical to compose, so local and deployed
+the same image with different start commands, identical to compose, so local and deployed
 behaviour cannot diverge. Secrets are marked `sync: false` and are entered in the Render
 dashboard, never committed.
 
@@ -410,12 +496,20 @@ dashboard, never committed.
 
 **Security and multi-tenancy**
 - One shared API key, so every agent sees the whole corpus. Per-user tokens mapped to
-  document ACLs — with the filter pushed into the Qdrant payload query so it cannot be
-  bypassed — is the obvious next step for a financial-services client.
+  document ACLs is the obvious next step for a financial-services client, with the filter
+  pushed into the Qdrant payload query so it cannot be bypassed.
 - No rate limiting or per-client quotas on the MCP endpoint.
+
+**The assistant**
+- Conversations are not persisted. Reloading the page starts fresh, and history lives only
+  in the browser tab. Storing threads per user is the obvious next step.
+- Only Anthropic streams token by token. The OpenAI and Google adapters emit each message
+  in one piece, because their tool loops are simpler to keep correct non-streamed; the
+  event contract already supports deltas, so this is an adapter change, not a redesign.
+- No per-user rate limiting on `/chat`, and no cost accounting per employee.
 
 **Operations**
 - Structured JSON logs, but no metrics or tracing. Retrieval latency percentiles and a
-  "queries that returned nothing" counter would be the first two dashboards — the second
+  "queries that returned nothing" counter would be the first two dashboards; the second
   is the best available signal for what the knowledge base is missing.
 - The UI has no auth; it assumes deployment behind a corporate SSO proxy.

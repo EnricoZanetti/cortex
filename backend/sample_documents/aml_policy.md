@@ -1,6 +1,6 @@
 # Anti-Money Laundering (AML) Policy
 
-Northgate Financial Services — Internal Policy NGF-COMP-004
+Northgate Financial Services: Internal Policy NGF-COMP-004
 Version 3.2 · Owner: Financial Crime Compliance · Review cycle: annual
 
 ## 1. Purpose and scope

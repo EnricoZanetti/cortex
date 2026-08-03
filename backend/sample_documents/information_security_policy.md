@@ -1,6 +1,6 @@
 # Information Security Policy
 
-Northgate Financial Services — Internal Policy NGF-SEC-001
+Northgate Financial Services: Internal Policy NGF-SEC-001
 Version 5.0 · Owner: Chief Information Security Officer
 
 ## 1. Scope
@@ -14,12 +14,12 @@ behalf. It covers firm-owned and approved personal devices.
 Every document and dataset carries one of four classifications. When in doubt, classify
 upward and ask the information owner.
 
-- **Public** — approved for external publication. No restrictions.
-- **Internal** — default for firm material. May be shared inside the firm; not outside.
-- **Confidential** — client data, financial results before release, personal data.
+- **Public**: approved for external publication. No restrictions.
+- **Internal**: default for firm material. May be shared inside the firm; not outside.
+- **Confidential**: client data, financial results before release, personal data.
   Sharing outside the firm requires a signed non-disclosure agreement and information
   owner approval.
-- **Restricted** — material non-public information, credentials, security architecture,
+- **Restricted**: material non-public information, credentials, security architecture,
   investigation files. Access is granted individually and reviewed monthly.
 
 Confidential and Restricted material must be encrypted at rest and in transit, and may
@@ -71,8 +71,9 @@ material must never be entered into any AI tool.
 
 ## 7. Incident reporting
 
-Report any suspected security incident — phishing, malware, data sent to the wrong
-recipient, lost device, suspected account compromise — to security@northgate.example
+Report any suspected security incident to security@northgate.example within one hour of
+noticing it. That includes: phishing, malware, data sent to the wrong recipient, a lost
+device, and a suspected account compromise.
 **within one hour** of noticing it.
 
 Do not attempt to investigate or remediate an incident yourself. Preserve evidence: do not
