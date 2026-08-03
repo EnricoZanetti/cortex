@@ -14,6 +14,11 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100%;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -21,12 +26,18 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 15px;
   line-height: 1.5;
+  display: flex;
+  flex-direction: column;
 }
 
 .header {
+  flex: 0 0 auto;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   padding: 20px 32px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .header h1 {
@@ -42,10 +53,14 @@ body {
 
 .container {
   max-width: 1100px;
-  margin: 24px auto;
-  padding: 0 24px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
   display: grid;
   gap: 24px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .panel {
@@ -121,6 +136,46 @@ button.link {
 
 button.link.neutral {
   color: var(--accent);
+}
+
+button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 20, 26, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 420px;
+  width: calc(100% - 48px);
+  box-shadow: 0 12px 32px rgba(15, 20, 26, 0.25);
+}
+
+.modal h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.modal p {
+  margin: 0 0 20px;
+  color: var(--muted);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 table {
@@ -208,6 +263,14 @@ th {
   font-size: 13px;
 }
 
+.footer {
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -256,11 +319,13 @@ th {
 .chat-panel {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 220px);
+  height: 100%;
+  min-height: 0;
 }
 
 .chat-log {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 8px 2px 16px;
   display: flex;

@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '(.tool_input.content // .tool_input.new_string // \"\")' | grep -q '—' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Em dash character found in the content. This repo forbids the em dash: use a colon or semicolon instead.\"}}' || echo '{}'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; case \"$f\" in */backend/*.py) (cd \"$(git rev-parse --show-toplevel 2>/dev/null)/backend\" && uv run ruff format \"$f\" >/dev/null 2>&1);; esac; } || true"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -60,6 +60,12 @@ class DocumentOut(BaseModel):
         )
 
 
+class DocumentTagsIn(BaseModel):
+    """New tag set for a document; replaces the existing set entirely."""
+
+    tags: list[str] = Field(default_factory=list)
+
+
 class DocumentListOut(BaseModel):
     """A page of documents."""
 

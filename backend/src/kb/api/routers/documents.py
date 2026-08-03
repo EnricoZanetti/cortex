@@ -19,7 +19,7 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from kb.api.deps import get_ingestion_service
-from kb.api.schemas import DeleteOut, DocumentListOut, DocumentOut, UploadOut
+from kb.api.schemas import DeleteOut, DocumentListOut, DocumentOut, DocumentTagsIn, UploadOut
 from kb.db.models import DocumentStatus
 from kb.db.repositories import DocumentRepository
 from kb.db.session import get_db
@@ -150,6 +150,22 @@ def reprocess_document(
     document.error = None
     session.commit()
     background_tasks.add_task(get_ingestion_service().process_document, document_id)
+    return DocumentOut.from_document(document)
+
+
+@router.put("/{document_id}/tags", response_model=DocumentOut)
+def update_document_tags(
+    document_id: uuid.UUID,
+    body: DocumentTagsIn,
+    session: Session = Depends(get_db),
+) -> DocumentOut:
+    """Replace a document's tags outright (add and remove in one call)."""
+    repo = DocumentRepository(session)
+    document = repo.get(document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found.")
+    document = get_ingestion_service().set_tags(session, document, body.tags)
+    session.commit()
     return DocumentOut.from_document(document)
 
 

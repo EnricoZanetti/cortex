@@ -27,6 +27,7 @@ export default function RootLayout({
           <Nav />
         </header>
         <main className="container">{children}</main>
+        <footer className="footer">Built by Enrico Zanetti</footer>
       </body>
     </html>
   );

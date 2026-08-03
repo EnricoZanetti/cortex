@@ -8,6 +8,7 @@ import {
   listDocuments,
   listTags,
   reprocessDocument,
+  updateDocumentTags,
   uploadDocument,
 } from "../../lib/api";
 
@@ -24,6 +25,10 @@ export default function Home() {
   const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(
     null,
   );
+  const [pendingDelete, setPendingDelete] = useState<Document | null>(null);
+  const [editingTags, setEditingTags] = useState<Document | null>(null);
+  const [editTagsInput, setEditTagsInput] = useState("");
+  const [savingTags, setSavingTags] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -87,8 +92,14 @@ export default function Home() {
     }
   }
 
-  async function handleDelete(doc: Document) {
-    if (!confirm(`Delete "${doc.filename}" and all of its indexed passages?`)) return;
+  function handleDelete(doc: Document) {
+    setPendingDelete(doc);
+  }
+
+  async function confirmDelete() {
+    const doc = pendingDelete;
+    if (!doc) return;
+    setPendingDelete(null);
     try {
       await deleteDocument(doc.id);
       setNotice({ kind: "ok", text: `Deleted ${doc.filename}.` });
@@ -105,6 +116,35 @@ export default function Home() {
       await refresh();
     } catch (error) {
       setNotice({ kind: "error", text: `Re-process failed: ${error}` });
+    }
+  }
+
+  function handleEditTags(doc: Document) {
+    setEditingTags(doc);
+    setEditTagsInput(doc.tags.join(", "));
+  }
+
+  async function confirmEditTags() {
+    const doc = editingTags;
+    if (!doc) return;
+    const nextTags = Array.from(
+      new Set(
+        editTagsInput
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean),
+      ),
+    );
+    setSavingTags(true);
+    try {
+      await updateDocumentTags(doc.id, nextTags);
+      setNotice({ kind: "ok", text: `Updated tags for ${doc.filename}.` });
+      setEditingTags(null);
+      await refresh();
+    } catch (error) {
+      setNotice({ kind: "error", text: `Updating tags failed: ${error}` });
+    } finally {
+      setSavingTags(false);
     }
   }
 
@@ -255,6 +295,13 @@ export default function Home() {
                         retry
                       </button>
                     )}
+                    <button
+                      className="link neutral"
+                      onClick={() => handleEditTags(doc)}
+                      style={{ marginRight: 10 }}
+                    >
+                      edit tags
+                    </button>
                     <button className="link" onClick={() => handleDelete(doc)}>
                       delete
                     </button>
@@ -265,6 +312,81 @@ export default function Home() {
           </table>
         )}
       </section>
+
+      {editingTags && (
+        <div className="modal-overlay" onClick={() => setEditingTags(null)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Edit tags</h3>
+            <p>
+              Tags for <strong>{editingTags.filename}</strong> (comma separated):
+            </p>
+            <input
+              type="text"
+              autoFocus
+              placeholder="compliance, policy"
+              value={editTagsInput}
+              onChange={(event) => setEditTagsInput(event.target.value)}
+            />
+            {tags.length > 0 && (
+              <p style={{ marginBottom: 0 }}>
+                <span className="muted">Existing tags, click to toggle: </span>
+                <br />
+                {tags.map((tag) => {
+                  const current = editTagsInput
+                    .split(",")
+                    .map((value) => value.trim())
+                    .filter(Boolean);
+                  const active = current.includes(tag.name);
+                  return (
+                    <span
+                      key={tag.name}
+                      className={`tag selectable ${active ? "selected" : ""}`}
+                      onClick={() =>
+                        setEditTagsInput(
+                          (active
+                            ? current.filter((name) => name !== tag.name)
+                            : [...current, tag.name]
+                          ).join(", "),
+                        )
+                      }
+                    >
+                      {tag.name}
+                    </span>
+                  );
+                })}
+              </p>
+            )}
+            <div className="modal-actions">
+              <button className="secondary" onClick={() => setEditingTags(null)}>
+                Cancel
+              </button>
+              <button disabled={savingTags} onClick={confirmEditTags}>
+                {savingTags ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingDelete && (
+        <div className="modal-overlay" onClick={() => setPendingDelete(null)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <h3>Delete document?</h3>
+            <p>
+              This will permanently delete <strong>{pendingDelete.filename}</strong> and
+              all of its indexed passages.
+            </p>
+            <div className="modal-actions">
+              <button className="secondary" onClick={() => setPendingDelete(null)}>
+                Cancel
+              </button>
+              <button className="danger" onClick={confirmDelete}>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

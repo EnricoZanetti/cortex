@@ -22,3 +22,6 @@ uploads/
 .DS_Store
 .idea/
 .vscode/
+
+# Personal, gitignored Claude Code instructions
+CLAUDE.local.md

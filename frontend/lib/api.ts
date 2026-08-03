@@ -96,6 +96,14 @@ export function reprocessDocument(id: string): Promise<Document> {
   return request<Document>(`/documents/${id}/reprocess`, { method: "POST" });
 }
 
+export function updateDocumentTags(id: string, tags: string[]): Promise<Document> {
+  return request<Document>(`/documents/${id}/tags`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tags }),
+  });
+}
+
 /* ------------------------------------------------------------------ chat */
 
 export interface ChatModel {

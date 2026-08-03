@@ -320,10 +320,25 @@ def resolve_parser_kind(filename: str, content_type: str | None) -> str:
     )
 
 
+def _strip_nul_bytes(parsed: ParsedDocument) -> ParsedDocument:
+    """Drop NUL bytes that some PDF extractors (and malformed text files) emit.
+
+    Postgres text columns reject 0x00 outright, so a stray NUL deep in a chunk fails the
+    whole insert; stripping it here, right after extraction, is cheaper than validating at
+    every downstream writer.
+    """
+    for block in parsed.blocks:
+        if "\x00" in block.text:
+            block.text = block.text.replace("\x00", "")
+    if parsed.title and "\x00" in parsed.title:
+        parsed.title = parsed.title.replace("\x00", "")
+    return parsed
+
+
 def parse_document(data: bytes, filename: str, content_type: str | None) -> ParsedDocument:
     """Parse ``data`` into a structured document, raising on unsupported/broken input."""
     kind = resolve_parser_kind(filename, content_type)
-    parsed = _PARSERS[kind].parse(data, filename)
+    parsed = _strip_nul_bytes(_PARSERS[kind].parse(data, filename))
     if not parsed.blocks:
         raise DocumentParseError(f"No text could be extracted from {filename!r}.")
     if parsed.title is None:

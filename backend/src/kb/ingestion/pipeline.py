@@ -188,6 +188,26 @@ class IngestionService:
             document=document, duplicate=False, duplicate_reason=None, tags_added=requested_tags
         )
 
+    def set_tags(self, session: Session, document: Document, tags: list[str]) -> Document:
+        """Replace a document's tag set outright (adds and removes as needed).
+
+        Unlike ``_merge_tags`` (upload-time, additive only), this is a full replacement so
+        the user can also remove a tag. Vector payloads are kept in sync the same way, and
+        orphaned tags (now attached to nothing) are pruned immediately rather than left to
+        accumulate.
+        """
+        normalized = sorted({normalize_tag(tag) for tag in tags if normalize_tag(tag)})
+        document.tags = TagRepository(session).get_or_create_many(normalized)
+        session.flush()
+        if document.status == DocumentStatus.READY:
+            try:
+                self.vector_store.update_tags(document.id, document.tag_names)
+            except Exception as exc:  # pragma: no cover - vector store availability
+                logger.warning("tag_sync_failed", document_id=str(document.id), error=str(exc))
+        TagRepository(session).prune_orphans()
+        logger.info("document_tags_set", document_id=str(document.id), tags=document.tag_names)
+        return document
+
     def _merge_tags(self, session: Session, document: Document, tags: list[str]) -> list[str]:
         """Add tags not already present. Keeps Qdrant payloads in sync."""
         existing = set(document.tag_names)
