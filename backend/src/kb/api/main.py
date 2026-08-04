@@ -39,7 +39,7 @@ def create_app() -> FastAPI:
     """Application factory."""
     settings = get_settings()
     app = FastAPI(
-        title="Document Intelligence: Management API",
+        title="Cortex: Management API",
         description=(
             "Upload, tag, list and delete documents in the knowledge base. "
             "AI agents query the same knowledge base through the MCP server."

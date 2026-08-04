@@ -1,4 +1,4 @@
-# Document Intelligence Server
+# Cortex
 
 A knowledge base for internal company documents, exposed to AI agents through an **MCP
 server over Streamable HTTP**.

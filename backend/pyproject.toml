@@ -1,7 +1,7 @@
 [project]
 name = "kb"
 version = "0.1.0"
-description = "Document Intelligence Server: ingestion pipeline, REST API and MCP server over a tagged document knowledge base."
+description = "Cortex: ingestion pipeline, REST API and MCP server over a tagged document knowledge base."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

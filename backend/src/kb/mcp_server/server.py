@@ -82,8 +82,8 @@ def build_server() -> MCPServer:
     context = ToolContext(embedder=build_embedder(), vector_store=VectorStore())
 
     server = MCPServer(
-        name="document-intelligence",
-        title="Company Document Knowledge Base",
+        name="cortex",
+        title="Cortex: Company Document Knowledge Base",
         version="0.1.0",
         instructions=SERVER_INSTRUCTIONS,
     )

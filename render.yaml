@@ -91,7 +91,7 @@ services:
     name: kb-frontend
     runtime: docker
     domains:
-      - documentintelligence.enricozanetti.dev
+      - cortex.enricozanetti.dev
     plan: free
     dockerContext: ./frontend
     dockerfilePath: ./frontend/Dockerfile

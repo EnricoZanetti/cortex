@@ -1,4 +1,4 @@
-name: document-intelligence
+name: cortex
 
 services:
   postgres:

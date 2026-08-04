@@ -3,7 +3,7 @@ import "./globals.css";
 import { Nav } from "./nav";
 
 export const metadata: Metadata = {
-  title: "Document Intelligence: Knowledge Base",
+  title: "Cortex: Knowledge Base",
   description:
     "Ask questions in natural language, and manage the documents the assistant searches.",
 };
@@ -18,7 +18,7 @@ export default function RootLayout({
       <body>
         <header className="header">
           <div>
-            <h1>Document Intelligence</h1>
+            <h1>Cortex</h1>
             <p>
               Ask questions in plain language. Answers are grounded in the uploaded
               documents and retrieved through the MCP server.
