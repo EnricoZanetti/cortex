@@ -5,7 +5,11 @@
  * build time via NEXT_PUBLIC_API_URL and defaults to the local compose setup.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Render's `fromService`/`property: host` (used in render.yaml) yields a bare hostname
+// with no scheme, so a missing "http(s)://" is coerced to https rather than left to break
+// every fetch call.
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = /^https?:\/\//.test(RAW_API_URL) ? RAW_API_URL : `https://${RAW_API_URL}`;
 
 export type DocumentStatus =
   | "pending"

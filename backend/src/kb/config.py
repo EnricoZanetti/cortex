@@ -153,6 +153,20 @@ class Settings(BaseSettings):
             return [item.strip() for item in text.split(",") if item.strip()]
         return value
 
+    @field_validator("cors_origins", mode="after")
+    @classmethod
+    def _default_cors_scheme(cls, origins: list[str]) -> list[str]:
+        """Coerce bare hostnames to https origins.
+
+        Browsers send a scheme in the ``Origin`` header, so a bare host never matches.
+        Render's ``fromService``/``property: host`` (see render.yaml) yields exactly that:
+        a scheme-less hostname.
+        """
+        return [
+            origin if origin == "*" or "://" in origin else f"https://{origin}"
+            for origin in origins
+        ]
+
     @model_validator(mode="after")
     def _check_invariants(self) -> Settings:
         if self.chunk_overlap_tokens >= self.chunk_target_tokens:
