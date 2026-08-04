@@ -35,6 +35,14 @@ class ChatRequest(BaseModel):
 
     model: str = Field(description="Model id from GET /chat/models.")
     messages: list[ChatMessageIn] = Field(min_length=1, max_length=50)
+    api_key: str | None = Field(
+        default=None,
+        max_length=512,
+        description=(
+            "Personal API key for the model's provider, from the browser's Settings page. "
+            "Used for this turn only; never persisted or logged server-side."
+        ),
+    )
 
 
 @router.get("/models", response_model=ChatModelsOut)
@@ -99,7 +107,9 @@ async def chat(request: ChatRequest) -> StreamingResponse:
 
     async def event_stream() -> AsyncIterator[str]:
         messages = [message.model_dump() for message in request.messages]
-        async for event in _service.stream(model_id=request.model, messages=messages):
+        async for event in _service.stream(
+            model_id=request.model, messages=messages, client_api_key=request.api_key
+        ):
             yield f"data: {json.dumps(asdict(event))}\n\n"
 
     return StreamingResponse(

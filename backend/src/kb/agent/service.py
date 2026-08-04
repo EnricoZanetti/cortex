@@ -58,15 +58,17 @@ class ChatService:
         *,
         model_id: str,
         messages: list[dict[str, str]],
+        client_api_key: str | None = None,
     ) -> AsyncIterator[ChatEvent]:
         """Yield events for a turn. Never raises: failures arrive as an error event.
 
         The caller is an SSE response; an exception escaping here would truncate
         the stream with no explanation on the page, so every failure is converted
-        into a `TurnError` the UI can render.
+        into a `TurnError` the UI can render. ``client_api_key``, when given, comes
+        from the browser's Settings page and is used for this turn only.
         """
         try:
-            model, api_key = catalog.resolve(model_id)
+            model, api_key = catalog.resolve(model_id, client_api_key)
         except Exception as exc:
             yield TurnError(message=str(exc))
             return

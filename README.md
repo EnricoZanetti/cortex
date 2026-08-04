@@ -273,7 +273,7 @@ Documents are split **on structure first**, not on character offsets.
    in real token length. Small sibling subsections (2.1, 2.2, 2.3) are packed together up
    to that ceiling, but a chunk is **never** grown across a top-level section boundary
    just to fill the budget. A document of short sections therefore yields short chunks;
-   that is the intended behaviour, not a bug.
+   that is the intended behaviour.
 
 4. **~120 tokens of overlap** catches answers that straddle a boundary;
    `fetch_chunk_context` covers the rest without inflating every chunk.
@@ -350,7 +350,7 @@ pruned.
 | **Postgres** | Document/tag/chunk metadata, plus the lexical half of the hybrid search. Using one database for both means a delete is transactional, and tag counts are exact. |
 | **`text-embedding-3-small`** | Best quality-per-euro for prose at this scale; swappable behind a protocol. |
 | **Next.js** | Two screens: ask and manage. App Router plus a thin fetch client, no state library. |
-| **Multi-provider chat** | One adapter per vendor behind a `ChatProvider` protocol, and a model catalogue that is one line per model. An employee picks the model; an operator picks which providers exist by setting keys. |
+| **Multi-provider chat** | One adapter per vendor behind a `ChatProvider` protocol, and a model catalogue that is one line per model. An employee picks the model; an operator picks which providers exist by setting keys, or an employee adds a personal key in Settings. |
 | **uv** | Fast, lockfile-based, reproducible installs; the same lock drives local dev, CI and the Docker image. |
 
 ---
@@ -472,6 +472,18 @@ the same image with different start commands, identical to compose, so local and
 behaviour cannot diverge. Secrets are marked `sync: false` and are entered in the Render
 dashboard, never committed.
 
+To deploy: create a Qdrant Cloud cluster (free tier is enough), push this repo to GitHub,
+then in Render use **New > Blueprint** pointed at the repo and fill in the `sync: false`
+values when prompted (`OPENAI_API_KEY`, `MCP_API_KEY`, `QDRANT_URL`, `QDRANT_API_KEY`, and
+whichever chat provider keys you want enabled by default).
+
+Since the app is then reachable by anyone with the URL, an operator does not have to fund
+every visitor's chat usage: the **Settings** page lets an employee paste their own
+Anthropic/OpenAI/Google key, kept in that browser's local storage and sent only as a
+per-request field on `/chat`, never persisted or logged server-side (`kb/agent/catalog.py`,
+`resolve()`). The MCP bearer token stays a single shared secret regardless; it gates the
+retrieval tools, not the chat providers.
+
 ---
 
 ## Known limitations, and what I would do next
@@ -506,7 +518,9 @@ dashboard, never committed.
 - Only Anthropic streams token by token. The OpenAI and Google adapters emit each message
   in one piece, because their tool loops are simpler to keep correct non-streamed; the
   event contract already supports deltas, so this is an adapter change, not a redesign.
-- No per-user rate limiting on `/chat`, and no cost accounting per employee.
+- No per-user rate limiting on `/chat`, and no cost accounting per employee. A personal
+  key entered in Settings at least keeps one employee's usage off the operator's bill;
+  it does not add a quota of its own.
 
 **Operations**
 - Structured JSON logs, but no metrics or tracing. Retrieval latency percentiles and a

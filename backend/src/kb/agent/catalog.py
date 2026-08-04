@@ -126,9 +126,12 @@ def default_model() -> ModelSpec | None:
     return next((model for model in MODELS if is_available(model)), None)
 
 
-def resolve(model_id: str) -> tuple[ModelSpec, str]:
+def resolve(model_id: str, client_api_key: str | None = None) -> tuple[ModelSpec, str]:
     """Look up a model and its API key, with an actionable error if either is missing.
 
+    ``client_api_key`` lets a caller bring their own key for this turn only: it is
+    never persisted server-side, so a key entered in the browser's Settings page
+    overrides (rather than requires) the operator's environment configuration.
     Returns the key alongside the spec so callers do not repeat the lookup, and
     so there is exactly one place that decides whether a model is usable.
     """
@@ -136,10 +139,10 @@ def resolve(model_id: str) -> tuple[ModelSpec, str]:
     if model is None:
         known = ", ".join(sorted(MODELS_BY_ID))
         raise ModelNotAvailableError(f"Unknown model {model_id!r}. Available models: {known}.")
-    api_key = provider_api_key(model.provider)
+    api_key = (client_api_key or "").strip() or provider_api_key(model.provider)
     if api_key is None:
         raise ModelNotAvailableError(
-            f"{model.label} is not configured: set {model.env_var} in the environment "
-            "and restart the API."
+            f"{model.label} is not configured: set {model.env_var} in the environment, "
+            "or add a personal key in Settings."
         )
     return model, api_key

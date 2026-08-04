@@ -83,6 +83,7 @@ label {
 }
 
 input[type="text"],
+input[type="password"],
 input[type="file"],
 select {
   width: 100%;
