@@ -97,3 +97,8 @@ services:
       # Baked into the client bundle at build time, so it must be the public API URL.
       - key: NEXT_PUBLIC_API_URL
         fromService: { name: kb-api, type: web, property: host }
+      # The image's CMD (`node server.js`) listens on whatever PORT is in its environment,
+      # defaulting to 3000 per the Dockerfile. Render's proxy otherwise assumes 10000 for
+      # Docker services with no explicit PORT, which misroutes every request into a 502.
+      - key: PORT
+        value: "3000"
