@@ -153,57 +153,6 @@ export function listChatModels(): Promise<ChatModelList> {
   return request<ChatModelList>("/chat/models");
 }
 
-/* ------------------------------------------------------------- api keys */
-
-/**
- * Personal provider API keys, kept in the browser only.
- *
- * These never touch the API except as the `api_key` field of a single /chat
- * call, and the server never persists or logs them: they exist only in
- * localStorage on this device. That keeps a publicly deployed instance from
- * needing every visitor to share the operator's provider credentials.
- */
-export type ProviderId = "anthropic" | "openai" | "google";
-
-const STORAGE_KEY = "kb_provider_api_keys";
-
-function readStoredKeys(): Partial<Record<ProviderId, string>> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Partial<Record<ProviderId, string>>) : {};
-  } catch {
-    return {};
-  }
-}
-
-export function getStoredApiKeys(): Partial<Record<ProviderId, string>> {
-  return readStoredKeys();
-}
-
-export function getStoredApiKey(provider: string): string | null {
-  const keys = readStoredKeys();
-  const value = keys[provider as ProviderId];
-  return value && value.trim() ? value.trim() : null;
-}
-
-export function setStoredApiKey(provider: ProviderId, key: string): void {
-  const keys = readStoredKeys();
-  const trimmed = key.trim();
-  if (trimmed) {
-    keys[provider] = trimmed;
-  } else {
-    delete keys[provider];
-  }
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
-}
-
-export function clearStoredApiKey(provider: ProviderId): void {
-  const keys = readStoredKeys();
-  delete keys[provider];
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
-}
-
 /**
  * Stream one chat turn.
  *
@@ -214,12 +163,11 @@ export async function* streamChat(
   model: string,
   messages: { role: string; content: string }[],
   signal?: AbortSignal,
-  apiKey?: string | null,
 ): AsyncGenerator<ChatEvent> {
   const response = await fetch(`${API_URL}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, api_key: apiKey || undefined }),
+    body: JSON.stringify({ model, messages }),
     signal,
   });
 

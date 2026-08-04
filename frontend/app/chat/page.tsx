@@ -1,15 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import {
-  ChatEvent,
-  ChatModel,
-  Citation,
-  getStoredApiKey,
-  listChatModels,
-  streamChat,
-} from "../../lib/api";
+import { ChatEvent, ChatModel, Citation, listChatModels, streamChat } from "../../lib/api";
 
 /** One tool invocation, shown inline so the user sees the agent's reasoning path. */
 interface ToolActivity {
@@ -42,9 +34,6 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  // Bumped whenever a personal key might have changed, to force availableModels
-  // (which reads localStorage, not React state) to recompute.
-  const [keyVersion, setKeyVersion] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -57,28 +46,11 @@ export default function ChatPage() {
       .catch((error) => setLoadError(String(error)));
   }, []);
 
-  // Personal keys live in localStorage and can change in the Settings tab in the
-  // same session, so re-check whenever this tab regains focus.
-  useEffect(() => {
-    const bump = () => setKeyVersion((current) => current + 1);
-    window.addEventListener("focus", bump);
-    return () => window.removeEventListener("focus", bump);
-  }, []);
-
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns]);
 
-  // A model is usable if the operator configured its provider server-side, or the
-  // user saved a personal key for it in Settings.
-  const isUsable = useCallback(
-    (entry: ChatModel) => entry.available || Boolean(getStoredApiKey(entry.provider)),
-    [keyVersion],
-  );
-  const availableModels = useMemo(
-    () => models.filter((entry) => isUsable(entry)),
-    [models, isUsable],
-  );
+  const availableModels = useMemo(() => models.filter((entry) => entry.available), [models]);
 
   const send = useCallback(
     async (question: string) => {
@@ -107,9 +79,7 @@ export default function ChatPage() {
         );
 
       try {
-        const chosen = models.find((entry) => entry.id === model);
-        const apiKey = chosen ? getStoredApiKey(chosen.provider) : null;
-        for await (const event of streamChat(model, history, controller.signal, apiKey)) {
+        for await (const event of streamChat(model, history, controller.signal)) {
           applyEvent(event, patch);
         }
       } catch (error) {
@@ -144,19 +114,12 @@ export default function ChatPage() {
             style={{ width: "auto" }}
             disabled={busy}
           >
-            {models.map((entry) => {
-              const usable = isUsable(entry);
-              return (
-                <option key={entry.id} value={entry.id} disabled={!usable}>
-                  {entry.provider_label} · {entry.label}
-                  {usable
-                    ? entry.available
-                      ? ""
-                      : " (personal key)"
-                    : ` (set ${entry.requires_env_var} or add a key in Settings)`}
-                </option>
-              );
-            })}
+            {models.map((entry) => (
+              <option key={entry.id} value={entry.id} disabled={!entry.available}>
+                {entry.provider_label} · {entry.label}
+                {entry.available ? "" : ` (set ${entry.requires_env_var})`}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -166,8 +129,7 @@ export default function ChatPage() {
         <div className="notice error">
           No chat model is configured. Set at least one of{" "}
           {[...new Set(models.map((entry) => entry.requires_env_var))].join(", ")} in the
-          environment and restart the API, or add a personal key on the{" "}
-          <Link href="/settings">Settings</Link> page.
+          environment and restart the API.
         </div>
       )}
 
