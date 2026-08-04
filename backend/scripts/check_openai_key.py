@@ -47,18 +47,11 @@ def test_openai_key(api_key: str) -> None:
 
 
 if __name__ == "__main__":
-    key = None
-
-    if len(sys.argv) > 1:
-        key = sys.argv[1]
-    else:
-        key = os.environ.get("OPENAI_API_KEY")
+    key = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("OPENAI_API_KEY")
 
     if not key:
         print("❌ Nessuna API key trovata.")
-        print(
-            "Passa la key come argomento oppure imposta la variabile d'ambiente OPENAI_API_KEY."
-        )
+        print("Passa la key come argomento oppure imposta la variabile d'ambiente OPENAI_API_KEY.")
         sys.exit(1)
 
     test_openai_key(key)

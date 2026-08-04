@@ -73,16 +73,16 @@ MODELS: tuple[ModelSpec, ...] = (
         description="Fastest and cheapest; best for simple lookups.",
     ),
     ModelSpec(
-        id="gpt-5.1",
-        label="GPT-5.1",
+        id="gpt-5.6-luna",
+        label="GPT-5.6 Luna",
         provider="openai",
-        description="OpenAI's flagship model.",
+        description="OpenAI's fastest, most cost-efficient model.",
     ),
     ModelSpec(
-        id="gpt-5-mini",
-        label="GPT-5 mini",
+        id="gpt-5.4",
+        label="GPT-5.4",
         provider="openai",
-        description="Smaller and faster OpenAI model.",
+        description="OpenAI's affordable model for coding and professional work.",
     ),
     ModelSpec(
         id="gemini-2.5-pro",

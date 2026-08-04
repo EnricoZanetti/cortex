@@ -293,7 +293,7 @@ class TestErrorMessages:
         """Both arrive as HTTP 429, but 'add credits' is not 'retry shortly'."""
         from kb.agent.service import _friendly_error
 
-        model = catalog.MODELS_BY_ID["gpt-5.1"]
+        model = catalog.MODELS_BY_ID["gpt-5.6-luna"]
         exhausted = RuntimeError(
             "Error code: 429 - {'message': 'You have no credits remaining.', "
             "'code': 'credit_balance_exhausted'}"
@@ -306,7 +306,7 @@ class TestErrorMessages:
         """Regression: this used to surface as 'unhandled errors in a TaskGroup'."""
         from kb.agent.service import _friendly_error
 
-        model = catalog.MODELS_BY_ID["gpt-5.1"]
+        model = catalog.MODELS_BY_ID["gpt-5.6-luna"]
         buried = BaseExceptionGroup(
             "unhandled errors in a TaskGroup",
             [BaseExceptionGroup("unhandled errors in a TaskGroup", [RuntimeError("401 api key")])],

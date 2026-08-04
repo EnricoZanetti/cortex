@@ -168,6 +168,24 @@ class Settings(BaseSettings):
         ]
 
     @model_validator(mode="after")
+    def _default_mcp_scheme(self) -> Settings:
+        """Coerce a bare MCP host to a full URL.
+
+        Render's ``fromService``/``property: host`` (see render.yaml) yields a scheme-less
+        hostname, and httpx refuses to open a session against one -- the same quirk
+        ``_default_cors_scheme`` works around for ``cors_origins``. Render's private
+        networking is plain HTTP, and the MCP server only answers on ``mcp_path``, so a
+        bare host needs both a scheme and the path added.
+        """
+        url = self.mcp_server_url
+        if "://" not in url:
+            url = f"http://{url}"
+        if not url.rstrip("/").endswith(self.mcp_path):
+            url = url.rstrip("/") + self.mcp_path
+        self.mcp_server_url = url
+        return self
+
+    @model_validator(mode="after")
     def _check_invariants(self) -> Settings:
         if self.chunk_overlap_tokens >= self.chunk_target_tokens:
             raise ValueError("CHUNK_OVERLAP_TOKENS must be smaller than CHUNK_TARGET_TOKENS")

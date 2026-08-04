@@ -87,7 +87,7 @@ them. Nothing else breaks.
 | Provider | Variable | Models |
 | --- | --- | --- |
 | Anthropic | `ANTHROPIC_API_KEY` | Claude Opus 5, Claude Sonnet 5, Claude Haiku 4.5 |
-| OpenAI | `OPENAI_API_KEY` | GPT-5.1, GPT-5 mini (this key also drives embeddings) |
+| OpenAI | `OPENAI_API_KEY` | GPT-5.6 Luna, GPT-5.4 (this key also drives embeddings) |
 | Google | `GOOGLE_API_KEY` | Gemini 2.5 Pro, Gemini 2.5 Flash |
 
 Adding a model is a one-line entry in `backend/src/kb/agent/catalog.py`. Adding a
