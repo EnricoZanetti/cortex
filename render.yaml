@@ -9,28 +9,33 @@
 #
 # Both Python services run the same image with different start commands, exactly as in
 # docker-compose, so local and deployed behaviour cannot diverge.
+#
+# Everything below runs on Render's free tier: zero cost, meant for a short-lived demo.
+# Tradeoffs to know about:
+#   - Free web services spin down after 15 min idle; the next request eats a ~30-50s
+#     cold start while the container boots back up.
+#   - kb-postgres on the free plan is deleted after 30 days; re-provision and reseed
+#     if the deployment needs to outlive that.
+#   - Free instances don't support persistent disks, so the uploads disk was dropped;
+#     anything under STORAGE_DIR is wiped on every restart or redeploy.
 
 databases:
   - name: kb-postgres
     databaseName: kb
     user: kb
-    plan: basic-256mb
+    plan: free
 
 services:
   - type: web
     name: kb-api
     runtime: docker
-    plan: starter
+    plan: free
     dockerContext: ./backend
     dockerfilePath: ./backend/Dockerfile
     healthCheckPath: /healthz
     dockerCommand: >-
       sh -c "alembic upgrade head &&
              uvicorn kb.api.main:app --host 0.0.0.0 --port $PORT"
-    disk:
-      name: uploads
-      mountPath: /data/uploads
-      sizeGB: 1
     envVars:
       - key: DATABASE_URL
         fromDatabase: { name: kb-postgres, property: connectionString }
@@ -60,7 +65,7 @@ services:
   - type: web
     name: kb-mcp
     runtime: docker
-    plan: starter
+    plan: free
     dockerContext: ./backend
     dockerfilePath: ./backend/Dockerfile
     healthCheckPath: /healthz
@@ -85,7 +90,7 @@ services:
   - type: web
     name: kb-frontend
     runtime: docker
-    plan: starter
+    plan: free
     dockerContext: ./frontend
     dockerfilePath: ./frontend/Dockerfile
     envVars:
