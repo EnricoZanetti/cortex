@@ -124,6 +124,22 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     log_json: bool = Field(default=True)
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _force_psycopg_driver(cls, value: object) -> object:
+        """Coerce bare postgres(ql):// URLs to the psycopg3 driver.
+
+        Managed Postgres providers (e.g. Render's ``fromDatabase`` connection string)
+        hand back a driverless URL, which makes SQLAlchemy default to psycopg2 -- a
+        dependency this project doesn't install.
+        """
+        if isinstance(value, str):
+            if value.startswith("postgres://"):
+                return "postgresql+psycopg://" + value[len("postgres://") :]
+            if value.startswith("postgresql://"):
+                return "postgresql+psycopg://" + value[len("postgresql://") :]
+        return value
+
     @field_validator("mcp_allowed_hosts", "mcp_allowed_origins", "cors_origins", mode="before")
     @classmethod
     def _split_csv(cls, value: object) -> object:
