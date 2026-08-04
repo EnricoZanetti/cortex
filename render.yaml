@@ -57,8 +57,11 @@ services:
       # the deployed MCP service's public URL.
       - key: MCP_SERVER_URL
         fromService: { name: kb-mcp, type: web, property: host }
+      # `fromService`/`property: host` yields Render's private-network hostname, which
+      # never matches the browser's public Origin header, so this must be the frontend's
+      # actual public URL (its custom domain, once attached).
       - key: CORS_ORIGINS
-        fromService: { name: kb-frontend, type: web, property: host }
+        value: "https://cortex.enricozanetti.dev"
       - key: STORAGE_DIR
         value: /data/uploads
 
@@ -97,8 +100,12 @@ services:
     dockerfilePath: ./frontend/Dockerfile
     envVars:
       # Baked into the client bundle at build time, so it must be the public API URL.
+      # `fromService`/`property: host` yields Render's private-network hostname (not
+      # publicly resolvable from a browser), so this has to be set to kb-api's actual
+      # public URL, e.g. https://kb-api-<hash>.onrender.com, taken from the kb-api
+      # service page in the Render dashboard. sync:false so it's filled in per-deploy.
       - key: NEXT_PUBLIC_API_URL
-        fromService: { name: kb-api, type: web, property: host }
+        sync: false
       # The image's CMD (`node server.js`) listens on whatever PORT is in its environment,
       # defaulting to 3000 per the Dockerfile. Render's proxy otherwise assumes 10000 for
       # Docker services with no explicit PORT, which misroutes every request into a 502.
