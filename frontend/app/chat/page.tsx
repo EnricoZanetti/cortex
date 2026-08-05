@@ -177,7 +177,7 @@ export default function ChatPage() {
   return (
     <section className="panel chat-panel">
       <div className="toolbar">
-        <h2 style={{ margin: 0 }}>Ask the knowledge base</h2>
+        <h2 style={{ margin: 0 }}>Ask Cortex</h2>
         <div>
           <label htmlFor="model" style={{ display: "inline", marginRight: 8 }}>
             Model
