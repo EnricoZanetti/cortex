@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChatEvent, ChatModel, Citation, listChatModels, streamChat } from "../../lib/api";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { ChatEvent, ChatModel, Citation, chatHealth, listChatModels, streamChat } from "../../lib/api";
 
 /** One tool invocation, shown inline so the user sees the agent's reasoning path. */
 interface ToolActivity {
@@ -75,6 +77,9 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // The knowledge base runs on a free-tier deploy that spins down when idle. This tracks
+  // that separately from `loadError` so a cold start reads as "getting ready", not a fault.
+  const [kbReady, setKbReady] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -88,6 +93,35 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    // Loading this page is the only thing that reaches the MCP server before the user
+    // sends a message, so it also has to be what wakes it: poll health until it answers
+    // "ok" rather than making the user's first question absorb the cold-start delay.
+    const check = () => {
+      chatHealth()
+        .then((health) => {
+          if (cancelled) return;
+          if (health.mcp_server === "ok") {
+            setKbReady(true);
+          } else {
+            timer = setTimeout(check, 4000);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) timer = setTimeout(check, 4000);
+        });
+    };
+    check();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, []);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns]);
 
@@ -95,7 +129,7 @@ export default function ChatPage() {
 
   const send = useCallback(
     async (question: string) => {
-      if (!question.trim() || busy || !model) return;
+      if (!question.trim() || busy || !model || !kbReady) return;
 
       const history = [
         ...turns.map((turn) => ({ role: turn.role, content: turn.content })),
@@ -132,7 +166,7 @@ export default function ChatPage() {
         abortRef.current = null;
       }
     },
-    [busy, model, turns],
+    [busy, model, turns, kbReady],
   );
 
   function stop() {
@@ -165,6 +199,9 @@ export default function ChatPage() {
         </div>
       </div>
 
+      {!kbReady && (
+        <div className="notice ok">Getting things ready, this can take up to a minute…</div>
+      )}
       {loadError && <div className="notice error">Could not load models: {loadError}</div>}
       {!loadError && models.length > 0 && availableModels.length === 0 && (
         <div className="notice error">
@@ -191,7 +228,7 @@ export default function ChatPage() {
                   className="secondary"
                   title={suggestion.hint}
                   onClick={() => void send(suggestion.question)}
-                  disabled={busy || availableModels.length === 0}
+                  disabled={busy || !kbReady || availableModels.length === 0}
                 >
                   {suggestion.question}
                 </button>
@@ -208,7 +245,7 @@ export default function ChatPage() {
                   className="secondary"
                   title={suggestion.hint}
                   onClick={() => void send(suggestion.question)}
-                  disabled={busy || availableModels.length === 0}
+                  disabled={busy || !kbReady || availableModels.length === 0}
                 >
                   {suggestion.question}
                 </button>
@@ -236,7 +273,15 @@ export default function ChatPage() {
               </div>
             )}
 
-            {turn.content && <div className="bubble-text">{turn.content}</div>}
+            {turn.content && (
+              <div className="bubble-text">
+                {turn.role === "assistant" ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{turn.content}</ReactMarkdown>
+                ) : (
+                  <span style={{ whiteSpace: "pre-wrap" }}>{turn.content}</span>
+                )}
+              </div>
+            )}
             {turn.role === "assistant" && !turn.content && !turn.error && busy && (
               <div className="muted">Thinking…</div>
             )}
@@ -271,14 +316,14 @@ export default function ChatPage() {
           value={input}
           placeholder="Ask about a policy, a process, or a product…"
           onChange={(event) => setInput(event.target.value)}
-          disabled={busy || availableModels.length === 0}
+          disabled={busy || !kbReady || availableModels.length === 0}
         />
         {busy ? (
           <button type="button" className="secondary" onClick={stop}>
             Stop
           </button>
         ) : (
-          <button type="submit" disabled={!input.trim() || availableModels.length === 0}>
+          <button type="submit" disabled={!input.trim() || !kbReady || availableModels.length === 0}>
             Send
           </button>
         )}

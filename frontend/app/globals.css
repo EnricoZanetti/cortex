@@ -380,8 +380,89 @@ th {
 }
 
 .bubble-text {
-  white-space: pre-wrap;
   line-height: 1.55;
+}
+
+.bubble-text > *:first-child {
+  margin-top: 0;
+}
+
+.bubble-text > *:last-child {
+  margin-bottom: 0;
+}
+
+.bubble-text p {
+  margin: 0 0 10px;
+}
+
+.bubble-text ul,
+.bubble-text ol {
+  margin: 0 0 10px;
+  padding-left: 1.4em;
+}
+
+.bubble-text li {
+  margin: 2px 0;
+}
+
+.bubble-text li > p {
+  margin: 0;
+}
+
+.bubble-text strong {
+  font-weight: 700;
+}
+
+.bubble-text a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.bubble-text code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.bubble-text pre {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 10px 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0 0 10px;
+}
+
+.bubble-text pre code {
+  background: none;
+  padding: 0;
+}
+
+.bubble-text blockquote {
+  margin: 0 0 10px;
+  padding-left: 12px;
+  border-left: 3px solid var(--border);
+  color: var(--muted);
+}
+
+.bubble-text table {
+  border-collapse: collapse;
+  margin: 0 0 10px;
+  font-size: 0.95em;
+}
+
+.bubble-text th,
+.bubble-text td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+}
+
+.bubble-text h1,
+.bubble-text h2,
+.bubble-text h3 {
+  margin: 14px 0 6px;
+  line-height: 1.3;
 }
 
 .tools {

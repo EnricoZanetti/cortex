@@ -153,6 +153,22 @@ export function listChatModels(): Promise<ChatModelList> {
   return request<ChatModelList>("/chat/models");
 }
 
+export interface ChatHealth {
+  mcp_server: string;
+  mcp_server_url: string;
+  tools: string[];
+  models_available: number;
+}
+
+/**
+ * Reaches all the way to the MCP server, so calling this is also how the free-tier
+ * deploy gets woken up: a plain page load only touches the API, never the MCP server
+ * itself, so without this the first real chat message is what pays the cold-start cost.
+ */
+export function chatHealth(): Promise<ChatHealth> {
+  return request<ChatHealth>("/chat/health");
+}
+
 /**
  * Stream one chat turn.
  *

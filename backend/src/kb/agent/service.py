@@ -73,34 +73,51 @@ class ChatService:
             yield TurnError(message=str(exc))
             return
 
+        # Opened separately from the provider call below: on a free-tier deploy this is
+        # the request that wakes a sleeping MCP server, so a failure here almost always
+        # means "still starting up" rather than a provider problem, and deserves its own
+        # message instead of `_friendly_error`'s provider-shaped guesses.
         try:
-            async with KnowledgeBaseMcpClient() as mcp:
-                tools = await mcp.list_tools()
-                if not tools:
-                    yield TurnError(
-                        message=(
-                            "The knowledge base exposed no tools. Check that the MCP server "
-                            "is running and reachable at the configured MCP_SERVER_URL."
-                        )
+            mcp = await KnowledgeBaseMcpClient().__aenter__()
+        except Exception as exc:
+            logger.warning("mcp_unavailable", model=model.id, error=str(exc))
+            yield TurnError(
+                message=(
+                    "The knowledge base service is starting up after a period of inactivity. "
+                    "This can take up to a minute; please try again shortly."
+                )
+            )
+            return
+
+        try:
+            tools = await mcp.list_tools()
+            if not tools:
+                yield TurnError(
+                    message=(
+                        "The knowledge base exposed no tools. Check that the MCP server "
+                        "is running and reachable at the configured MCP_SERVER_URL."
                     )
-                    return
+                )
+                return
 
-                async def execute_tool(name: str, arguments: dict[str, Any]) -> McpToolResult:
-                    logger.info("chat_tool_call", tool=name, model=model.id)
-                    return await mcp.call_tool(name, arguments)
+            async def execute_tool(name: str, arguments: dict[str, Any]) -> McpToolResult:
+                logger.info("chat_tool_call", tool=name, model=model.id)
+                return await mcp.call_tool(name, arguments)
 
-                provider = self._build_provider(model.provider, api_key)
-                async for event in provider.run(
-                    model=model.id,
-                    system=SYSTEM_PROMPT,
-                    messages=messages,
-                    tools=tools,
-                    execute_tool=execute_tool,
-                ):
-                    yield event
+            provider = self._build_provider(model.provider, api_key)
+            async for event in provider.run(
+                model=model.id,
+                system=SYSTEM_PROMPT,
+                messages=messages,
+                tools=tools,
+                execute_tool=execute_tool,
+            ):
+                yield event
         except Exception as exc:
             logger.exception("chat_turn_failed", model=model.id)
             yield TurnError(message=_friendly_error(model, exc))
+        finally:
+            await mcp.__aexit__(None, None, None)
 
 
 def _leaf_causes(exc: BaseException) -> list[BaseException]:
