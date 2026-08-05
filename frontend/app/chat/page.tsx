@@ -20,11 +20,52 @@ interface Turn {
   error: string | null;
 }
 
-const SUGGESTIONS = [
-  "How quickly must I report a suspicious transaction?",
-  "How much annual leave can I carry over?",
-  "What are the instruction cut-off times for cross-border payments?",
-  "What documents do we have about onboarding?",
+/** A pre-written question plus a hint on which MCP tool(s) it is designed to exercise. */
+interface Suggestion {
+  question: string;
+  hint: string;
+}
+
+const GENERAL_SUGGESTIONS: Suggestion[] = [
+  {
+    question: "What documents do we have about onboarding?",
+    hint: "Tool: list_documents; browses inventory metadata (filenames, tags) without reading content.",
+  },
+  {
+    question: "What topics does the knowledge base cover?",
+    hint: "Tool: list_tags; lists the curated topic vocabulary (compliance, product, hr, onboarding...) and how many documents carry each.",
+  },
+  {
+    question: "Summarise the AML policy for me.",
+    hint: "Tool: get_document_summary; returns a document's title, tags and section outline without a full retrieval pass.",
+  },
+  {
+    question: "Only using compliance policies, what triggers enhanced due diligence?",
+    hint: "Tool: search_by_tag; restricts retrieval to documents tagged 'compliance', after list_tags confirms the tag exists.",
+  },
+];
+
+const SPECIFIC_SUGGESTIONS: Suggestion[] = [
+  {
+    question: "How quickly must I report a suspicious transaction?",
+    hint: "Tool: search; hybrid semantic and keyword search across the whole corpus; finds the AML policy's 24-hour SAR rule.",
+  },
+  {
+    question: "What are the instruction cut-off times for cross-border payments?",
+    hint: "Tool: search; pulls the cut-off table from the Vault Product Manual.",
+  },
+  {
+    question: "How much annual leave can I carry over?",
+    hint: "Tool: search; matches the HR FAQ export's leave carry-over answer.",
+  },
+  {
+    question: "When is the capital adequacy return due, and who owns it?",
+    hint: "Tool: search; reads the filing table inside the Regulatory Filing Calendar PDF.",
+  },
+  {
+    question: "Compare the custody fee rate across all three Vault account tiers.",
+    hint: "Tool: search_by_document; targets the Vault Fee Schedule specifically instead of the whole corpus.",
+  },
 ];
 
 export default function ChatPage() {
@@ -140,15 +181,36 @@ export default function ChatPage() {
               Ask a question in plain language. The assistant searches the uploaded
               documents through the MCP server and answers with citations.
             </p>
+            <div className="muted" style={{ marginTop: 8 }}>
+              General: what the knowledge base contains
+            </div>
             <div className="suggestions">
-              {SUGGESTIONS.map((suggestion) => (
+              {GENERAL_SUGGESTIONS.map((suggestion) => (
                 <button
-                  key={suggestion}
+                  key={suggestion.question}
                   className="secondary"
-                  onClick={() => void send(suggestion)}
+                  title={suggestion.hint}
+                  onClick={() => void send(suggestion.question)}
                   disabled={busy || availableModels.length === 0}
                 >
-                  {suggestion}
+                  {suggestion.question}
+                </button>
+              ))}
+            </div>
+
+            <div className="muted" style={{ marginTop: 12 }}>
+              Specific: facts pulled from a single passage or document
+            </div>
+            <div className="suggestions">
+              {SPECIFIC_SUGGESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion.question}
+                  className="secondary"
+                  title={suggestion.hint}
+                  onClick={() => void send(suggestion.question)}
+                  disabled={busy || availableModels.length === 0}
+                >
+                  {suggestion.question}
                 </button>
               ))}
             </div>

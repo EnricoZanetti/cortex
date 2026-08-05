@@ -29,6 +29,8 @@ SAMPLE_TAGS: dict[str, list[str]] = {
     "employee_onboarding_guide.md": ["hr", "onboarding"],
     "hr_faq_export.txt": ["hr", "faq"],
     "vault_product_manual.md": ["product"],
+    "regulatory_filing_calendar.pdf": ["compliance", "policy"],
+    "vault_fee_schedule.pdf": ["product"],
 }
 
 
