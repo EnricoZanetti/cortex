@@ -99,6 +99,18 @@ export default function ChatPage() {
     // Loading this page is the only thing that reaches the MCP server before the user
     // sends a message, so it also has to be what wakes it: poll health until it answers
     // "ok" rather than making the user's first question absorb the cold-start delay.
+    //
+    // `/chat/health` wakes the MCP server only indirectly, by proxying a probe through
+    // the API; on Render's free tier both services can be asleep at once, and the API's
+    // own cold start can eat enough of that request's budget that the proxied probe
+    // never gets a warm MCP server to talk to. So alongside the poll, curl the MCP
+    // server's own `/healthz` directly the moment we learn its URL (from the health
+    // response, success or error). Best-effort: any failure here just means the next
+    // poll tick tries again.
+    const wakeMcp = (url: string) => {
+      fetch(`${url.replace(/\/+$/, "")}/healthz`, { mode: "no-cors" }).catch(() => {});
+    };
+
     const check = () => {
       chatHealth()
         .then((health) => {
@@ -106,6 +118,7 @@ export default function ChatPage() {
           if (health.mcp_server === "ok") {
             setKbReady(true);
           } else {
+            if (health.mcp_server_url) wakeMcp(health.mcp_server_url);
             timer = setTimeout(check, 4000);
           }
         })
