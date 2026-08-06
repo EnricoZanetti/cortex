@@ -7,30 +7,7 @@ Employees upload and tag documents through a small web UI. The backend parses, c
 embeds them. An AI agent connects to the MCP server and answers questions in natural
 language, grounded in the actual documents, with citations.
 
-```
-┌────────────────┐      REST       ┌──────────────────────────────┐
-│  Next.js UI    │ ──────────────▶ │  FastAPI                     │
-│  Ask (chat)    │   SSE stream    │  /documents /tags  (manage)  │
-│  Documents     │ ◀────────────── │  /chat             (assist)  │
-└────────────────┘                 └───────────────┬──────────────┘
-                                                   │
-                        the assistant is itself an MCP client:
-                        it calls the tools over HTTP with a bearer
-                        token, exactly as an external agent would
-                                                   │
-                                     shared `kb` core package
-                                                   │
-┌────────────────┐  Streamable HTTP ┌──────────────┴──────────────┐
-│  MCP client    │ ─── Bearer ────▶ │  MCP server  (query plane)  │
-│  Claude Code / │                  │  7 tools at /mcp            │
-│  Desktop /curl │ ◀─────────────── │                             │
-└────────────────┘                  └──────────────┬──────────────┘
-                                                   │
-                      ┌────────────────────────────┴───────────────────────────────┐
-                      │  Postgres: documents, tags, chunks + full-text index       │
-                      │  Qdrant:   chunk embeddings + tag/document payload filters │
-                      └────────────────────────────────────────────────────────────┘
-```
+![Cortex architecture diagram](docs/assets/architecture-diagram.svg)
 
 The API and the MCP server are two processes running **the same image** with different
 start commands, both importing the same `kb` package. Ingestion and retrieval logic exists

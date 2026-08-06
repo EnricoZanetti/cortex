@@ -1,0 +1,106 @@
+<svg viewBox="0 0 960 620" xmlns="http://www.w3.org/2000/svg" font-family="'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif">
+
+  <defs>
+    <marker id="arrowTeal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5eead4"/>
+    </marker>
+    <marker id="arrowAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#fbbf24"/>
+    </marker>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#0a0f1a"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="960" height="620" fill="url(#bg)"/>
+
+  <!-- ===================== LAYER LABEL: CLIENT ===================== -->
+  <text x="40" y="46" fill="#64748b" font-size="11" letter-spacing="2" font-weight="600">CLIENT LAYER</text>
+
+  <!-- Next.js UI card -->
+  <rect x="40" y="60" width="260" height="110" rx="14" fill="#111827" stroke="#334155" stroke-width="1.2" filter="url(#softShadow)"/>
+  <rect x="40" y="60" width="260" height="34" rx="14" fill="#1e293b"/>
+  <rect x="40" y="80" width="260" height="14" fill="#1e293b"/>
+  <circle cx="60" cy="77" r="4" fill="#5eead4"/>
+  <text x="72" y="82" fill="#e2e8f0" font-size="14" font-weight="600">Next.js UI</text>
+  <text x="60" y="118" fill="#94a3b8" font-size="13">Ask (chat)</text>
+  <text x="60" y="142" fill="#94a3b8" font-size="13">Documents</text>
+
+  <!-- FastAPI card -->
+  <rect x="380" y="60" width="330" height="110" rx="14" fill="#111827" stroke="#334155" stroke-width="1.2" filter="url(#softShadow)"/>
+  <rect x="380" y="60" width="330" height="34" rx="14" fill="#1e293b"/>
+  <rect x="380" y="80" width="330" height="14" fill="#1e293b"/>
+  <circle cx="400" cy="77" r="4" fill="#5eead4"/>
+  <text x="412" y="82" fill="#e2e8f0" font-size="14" font-weight="600">FastAPI</text>
+  <text x="400" y="118" fill="#94a3b8" font-size="13">/documents /tags <tspan fill="#64748b">: manage</tspan></text>
+  <text x="400" y="142" fill="#94a3b8" font-size="13">/chat <tspan fill="#64748b">: assist</tspan></text>
+
+  <!-- REST / SSE arrows -->
+  <line x1="300" y1="98" x2="378" y2="98" stroke="#5eead4" stroke-width="1.6" marker-end="url(#arrowTeal)"/>
+  <text x="339" y="90" fill="#5eead4" font-size="11.5" text-anchor="middle" font-weight="600">REST</text>
+
+  <line x1="378" y1="134" x2="300" y2="134" stroke="#5eead4" stroke-width="1.6" marker-end="url(#arrowTeal)"/>
+  <text x="339" y="152" fill="#5eead4" font-size="11.5" text-anchor="middle" font-weight="600">SSE stream</text>
+
+  <!-- ===================== MIDDLE EXPLANATION ===================== -->
+  <rect x="230" y="215" width="500" height="92" rx="12" fill="#0f1a2b" stroke="#1e293b" stroke-width="1"/>
+  <text x="480" y="245" fill="#cbd5e1" font-size="13" text-anchor="middle">the assistant is itself an MCP client; it calls the tools</text>
+  <text x="480" y="265" fill="#cbd5e1" font-size="13" text-anchor="middle">over HTTP with a bearer token, exactly as an external agent would</text>
+  <text x="480" y="293" fill="#94a3b8" font-size="12.5" text-anchor="middle" font-style="italic">shared "kb" core package</text>
+
+  <!-- connector FastAPI -> explanation -->
+  <line x1="545" y1="170" x2="545" y2="215" stroke="#334155" stroke-width="1.4" stroke-dasharray="4,4"/>
+  <!-- connector explanation -> MCP server -->
+  <line x1="545" y1="307" x2="545" y2="352" stroke="#334155" stroke-width="1.4" stroke-dasharray="4,4"/>
+
+  <!-- ===================== LAYER LABEL: MCP ===================== -->
+  <text x="40" y="336" fill="#64748b" font-size="11" letter-spacing="2" font-weight="600">MCP LAYER</text>
+
+  <!-- MCP client card -->
+  <rect x="40" y="352" width="260" height="110" rx="14" fill="#111827" stroke="#334155" stroke-width="1.2" filter="url(#softShadow)"/>
+  <rect x="40" y="352" width="260" height="34" rx="14" fill="#1e293b"/>
+  <rect x="40" y="372" width="260" height="14" fill="#1e293b"/>
+  <circle cx="60" cy="369" r="4" fill="#5eead4"/>
+  <text x="72" y="374" fill="#e2e8f0" font-size="14" font-weight="600">MCP client</text>
+  <text x="60" y="410" fill="#94a3b8" font-size="13">Claude Code /</text>
+  <text x="60" y="434" fill="#94a3b8" font-size="13">Desktop / curl</text>
+
+  <!-- MCP server card -->
+  <rect x="380" y="352" width="330" height="110" rx="14" fill="#111827" stroke="#334155" stroke-width="1.2" filter="url(#softShadow)"/>
+  <rect x="380" y="352" width="330" height="34" rx="14" fill="#1e293b"/>
+  <rect x="380" y="372" width="330" height="14" fill="#1e293b"/>
+  <circle cx="400" cy="369" r="4" fill="#5eead4"/>
+  <text x="412" y="374" fill="#e2e8f0" font-size="14" font-weight="600">MCP server <tspan fill="#64748b" font-weight="400">(query plane)</tspan></text>
+  <text x="400" y="410" fill="#94a3b8" font-size="13">7 tools at /mcp</text>
+
+  <!-- Streamable HTTP / Bearer arrows -->
+  <line x1="300" y1="390" x2="378" y2="390" stroke="#5eead4" stroke-width="1.6" marker-end="url(#arrowTeal)"/>
+  <text x="339" y="378" fill="#5eead4" font-size="11.5" text-anchor="middle" font-weight="600">Streamable HTTP</text>
+  <text x="339" y="410" fill="#5eead4" font-size="10.5" text-anchor="middle" font-weight="500" opacity="0.85">bearer</text>
+
+  <line x1="378" y1="430" x2="300" y2="430" stroke="#5eead4" stroke-width="1.6" marker-end="url(#arrowTeal)"/>
+
+  <!-- connector MCP server -> datastore -->
+  <line x1="545" y1="462" x2="545" y2="500" stroke="#334155" stroke-width="1.4" stroke-dasharray="4,4"/>
+
+  <!-- ===================== LAYER LABEL: DATA ===================== -->
+  <text x="40" y="516" fill="#64748b" font-size="11" letter-spacing="2" font-weight="600">DATA LAYER</text>
+
+  <!-- Datastore card -->
+  <rect x="180" y="500" width="600" height="96" rx="14" fill="#1a1508" stroke="#78350f" stroke-width="1.2" filter="url(#softShadow)"/>
+  <rect x="180" y="500" width="600" height="34" rx="14" fill="#2a1f0d"/>
+  <rect x="180" y="520" width="600" height="14" fill="#2a1f0d"/>
+  <circle cx="200" cy="517" r="4" fill="#fbbf24"/>
+  <text x="212" y="522" fill="#fde68a" font-size="14" font-weight="600">Persistence</text>
+
+  <text x="200" y="558" fill="#fbbf24" font-size="13" font-weight="600">Postgres</text>
+  <text x="285" y="558" fill="#d6c295" font-size="13">documents, tags, chunks + full-text index</text>
+
+  <text x="200" y="580" fill="#fbbf24" font-size="13" font-weight="600">Qdrant</text>
+  <text x="285" y="580" fill="#d6c295" font-size="13">chunk embeddings + tag / document payload filters</text>
+
+</svg>
