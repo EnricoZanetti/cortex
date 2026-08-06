@@ -48,7 +48,7 @@ shows up in our own UI before a customer finds it.
 ```bash
 cp .env.example .env      # set MCP_API_KEY, plus at least one LLM provider key
 make up                   # builds and starts all five services
-make seed                 # loads six realistic sample documents
+make seed                 # loads eight realistic sample documents
 ```
 
 | What | Where |
@@ -350,7 +350,7 @@ pruned.
 | **Postgres** | Document/tag/chunk metadata, plus the lexical half of the hybrid search. Using one database for both means a delete is transactional, and tag counts are exact. |
 | **`text-embedding-3-small`** | Best quality-per-euro for prose at this scale; swappable behind a protocol. |
 | **Next.js** | Two screens: ask and manage. App Router plus a thin fetch client, no state library. |
-| **Multi-provider chat** | One adapter per vendor behind a `ChatProvider` protocol, and a model catalogue that is one line per model. An employee picks the model; an operator picks which providers exist by setting keys, or an employee adds a personal key in Settings. |
+| **Multi-provider chat** | One adapter per vendor behind a `ChatProvider` protocol, and a model catalogue that is one line per model. An employee picks the model; an operator picks which providers exist by setting keys. The backend also accepts a per-request personal key (`resolve()` in `kb/agent/catalog.py`), so a browser-side "bring your own key" UI is a frontend-only addition; the UI does not expose it yet. |
 | **uv** | Fast, lockfile-based, reproducible installs; the same lock drives local dev, CI and the Docker image. |
 
 ---
@@ -477,12 +477,13 @@ then in Render use **New > Blueprint** pointed at the repo and fill in the `sync
 values when prompted (`OPENAI_API_KEY`, `MCP_API_KEY`, `QDRANT_URL`, `QDRANT_API_KEY`, and
 whichever chat provider keys you want enabled by default).
 
-Since the app is then reachable by anyone with the URL, an operator does not have to fund
-every visitor's chat usage: the **Settings** page lets an employee paste their own
-Anthropic/OpenAI/Google key, kept in that browser's local storage and sent only as a
-per-request field on `/chat`, never persisted or logged server-side (`kb/agent/catalog.py`,
-`resolve()`). The MCP bearer token stays a single shared secret regardless; it gates the
-retrieval tools, not the chat providers.
+Since the app is then reachable by anyone with the URL, an operator funds every visitor's
+chat usage by default. `/chat` already accepts an `api_key` field per request and
+`resolve()` in `kb/agent/catalog.py` prefers it over the operator's own key, never
+persisting or logging it server-side; a "bring your own key" UI (a field kept in the
+browser's local storage) is the natural frontend addition on top of that, not yet built.
+The MCP bearer token stays a single shared secret regardless; it gates the retrieval
+tools, not the chat providers.
 
 ---
 
@@ -518,9 +519,10 @@ retrieval tools, not the chat providers.
 - Only Anthropic streams token by token. The OpenAI and Google adapters emit each message
   in one piece, because their tool loops are simpler to keep correct non-streamed; the
   event contract already supports deltas, so this is an adapter change, not a redesign.
-- No per-user rate limiting on `/chat`, and no cost accounting per employee. A personal
-  key entered in Settings at least keeps one employee's usage off the operator's bill;
-  it does not add a quota of its own.
+- No per-user rate limiting on `/chat`, and no cost accounting per employee. The backend
+  already accepts a personal key per request, which would keep one employee's usage off
+  the operator's bill once a Settings UI exists to collect it; neither adds a quota of
+  its own.
 
 **Operations**
 - Structured JSON logs, but no metrics or tracing. Retrieval latency percentiles and a
