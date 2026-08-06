@@ -1,5 +1,7 @@
 # Cortex
 
+Link to the presentation video: https://www.youtube.com/watch?v=gLqKar4TDyY
+
 A knowledge base for internal company documents, exposed to AI agents through an **MCP
 server over Streamable HTTP**.
 
