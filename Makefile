@@ -69,3 +69,13 @@ format: ## Auto-format the backend
 .PHONY: mcp-check
 mcp-check: ## Verify the MCP endpoint: auth, handshake and tool list
 	@./scripts/check_mcp.sh
+
+# --- releasing ---------------------------------------------------------------
+
+.PHONY: release
+release: ## Bump backend/frontend to VERSION, commit and tag (e.g. make release VERSION=0.2.0)
+	@test -n "$(VERSION)" || (echo "Usage: make release VERSION=x.y.z" && exit 1)
+	@sed -i.bak -E 's/^version = ".*"/version = "$(VERSION)"/' $(BACKEND)/pyproject.toml && rm $(BACKEND)/pyproject.toml.bak
+	@cd frontend && npm version $(VERSION) --no-git-tag-version --allow-same-version >/dev/null
+	@echo "Bumped to $(VERSION). Update CHANGELOG.md's [Unreleased] section, then:"
+	@echo "  git add -A && git commit -m 'release: v$(VERSION)' && git tag v$(VERSION)"
