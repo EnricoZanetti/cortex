@@ -6,15 +6,20 @@ import json
 from collections.abc import AsyncIterator
 from dataclasses import asdict
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from kb.agent.catalog import MODELS, default_model, is_available
 from kb.agent.mcp_client import probe
 from kb.agent.service import ChatService
 from kb.api.schemas import ChatHealthOut, ChatModelOut, ChatModelsOut
+from kb.auth.deps import get_current_user
 from kb.config import get_settings
+from kb.db.models import User, UserRole
+from kb.db.repositories import UserRepository
+from kb.db.session import get_db
 from kb.logging import get_logger
 
 logger = get_logger(__name__)
@@ -97,13 +102,34 @@ async def chat_health() -> ChatHealthOut:
 
 
 @router.post("")
-async def chat(request: ChatRequest) -> StreamingResponse:
+async def chat(
+    request: ChatRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
     """Answer a question, streaming tokens and tool activity as Server-Sent Events.
 
     Streaming is not decoration: a turn that runs several searches takes many
     seconds, and the tool-call events are what let the UI show the agent choosing
     between the search tools while the user waits.
+
+    Quota: a turn that supplies its own ``api_key`` never touches the free-run
+    counter. The admin role (see ``kb.auth.bootstrap``) is exempt from the counter
+    entirely -- it always runs on the operator's own provider keys, which is the
+    account meant to be handed out for demos. Everyone else spends one free run per
+    turn that relies on the operator's keys, and is rejected once exhausted rather
+    than silently charged to the operator's account.
     """
+    using_own_key = bool((request.api_key or "").strip())
+    needs_quota = user.role != UserRole.ADMIN and not using_own_key
+    if needs_quota and not UserRepository(db).decrement_free_run(user.id):
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=(
+                "Your free trial runs are used up. Add your own API key in Settings "
+                "to keep chatting."
+            ),
+        )
 
     async def event_stream() -> AsyncIterator[str]:
         messages = [message.model_dump() for message in request.messages]

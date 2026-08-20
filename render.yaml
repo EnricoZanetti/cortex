@@ -53,6 +53,19 @@ services:
         sync: false
       - key: GOOGLE_API_KEY
         sync: false
+      # Signs chat-login JWTs. Generate one: openssl rand -hex 32
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: JWT_EXPIRES_MINUTES
+        value: "10080"
+      - key: FREE_RUNS_PER_USER
+        value: "3"
+      # Optional: bootstrap one admin login with unlimited free runs on your own
+      # keys, to hand out for demos. Leave both unset in the dashboard to skip.
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
       # The assistant reaches the MCP server as an ordinary client, so it needs
       # the deployed MCP service's public URL. `fromService`/`property: host` would
       # give the private-network hostname instead, but kb-mcp is a free-plan service

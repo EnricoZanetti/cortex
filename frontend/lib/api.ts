@@ -54,10 +54,31 @@ export interface UploadResult {
   message: string;
 }
 
+const TOKEN_KEY = "cortex_token";
+
+/** Read the stored login token, if any. Guarded for SSR: this module also runs server-side. */
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string | null): void {
+  if (typeof window === "undefined") return;
+  if (token) window.localStorage.setItem(TOKEN_KEY, token);
+  else window.localStorage.removeItem(TOKEN_KEY);
+}
+
+/** Authorization header for the current login, or {} when logged out. */
+export function authHeader(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     cache: "no-store",
     ...init,
+    headers: { ...authHeader(), ...(init?.headers ?? {}) },
   });
   if (!response.ok) {
     // The API returns {"detail": "..."} for handled errors; fall back to the status text.
@@ -71,6 +92,42 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(detail);
   }
   return (await response.json()) as T;
+}
+
+/* -------------------------------------------------------------------- auth */
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  username: string;
+  role: "user" | "admin";
+  free_runs_remaining: number;
+}
+
+export interface AuthResult {
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
+}
+
+export function signup(email: string, username: string, password: string): Promise<AuthResult> {
+  return request<AuthResult>("/auth/signup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, username, password }),
+  });
+}
+
+export function login(identifier: string, password: string): Promise<AuthResult> {
+  return request<AuthResult>("/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identifier, password }),
+  });
+}
+
+export function getMe(): Promise<AuthUser> {
+  return request<AuthUser>("/auth/me");
 }
 
 export function listDocuments(tag?: string): Promise<DocumentList> {
@@ -178,17 +235,27 @@ export function chatHealth(): Promise<ChatHealth> {
 export async function* streamChat(
   model: string,
   messages: { role: string; content: string }[],
+  apiKey?: string,
   signal?: AbortSignal,
 ): AsyncGenerator<ChatEvent> {
   const response = await fetch(`${API_URL}/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages }),
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify({ model, messages, api_key: apiKey || undefined }),
     signal,
   });
 
   if (!response.ok || !response.body) {
-    throw new Error(`Chat request failed: ${response.status} ${response.statusText}`);
+    // The API returns {"detail": "..."} for handled errors (e.g. 402 quota exhausted,
+    // 401 not logged in); surface that instead of a bare status code where possible.
+    let detail = `Chat request failed: ${response.status} ${response.statusText}`;
+    try {
+      const body = await response.json();
+      detail = body.detail ?? body.error ?? detail;
+    } catch {
+      /* response had no JSON body */
+    }
+    throw new Error(detail);
   }
 
   const reader = response.body.getReader();

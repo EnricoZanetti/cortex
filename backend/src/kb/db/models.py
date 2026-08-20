@@ -57,6 +57,45 @@ class DocumentStatus(enum.StrEnum):
 SEARCHABLE_STATUSES = (DocumentStatus.READY,)
 
 
+class UserRole(enum.StrEnum):
+    """A signed-up chat user, or the operator's own bootstrapped admin account."""
+
+    USER = "user"
+    ADMIN = "admin"
+
+
+class User(Base):
+    """A chat login: email/username/password plus a free-trial run counter.
+
+    Admins bypass the counter entirely (see ``UserRepository.decrement_free_run`` and the
+    ``/chat`` route) -- that role exists so the operator can hand out one login that always
+    uses their own provider keys, for demoing the tool.
+    """
+
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True, index=True)
+    username: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[UserRole] = mapped_column(
+        Enum(UserRole, name="user_role", native_enum=False),
+        nullable=False,
+        default=UserRole.USER,
+        index=True,
+    )
+    free_runs_remaining: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    __table_args__ = (CheckConstraint("email = lower(email)", name="ck_users_email_lowercase"),)
+
+
 document_tags = Table(
     "document_tags",
     Base.metadata,

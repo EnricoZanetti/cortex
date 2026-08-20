@@ -17,6 +17,7 @@ os.environ.setdefault("EMBEDDING_PROVIDER", "hash")
 os.environ.setdefault("MCP_API_KEY", "test-key")
 os.environ.setdefault("OPENAI_API_KEY", "")
 os.environ.setdefault("STORAGE_DIR", "/tmp/kb-test-uploads")
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-not-for-prod")
 
 
 def pytest_configure(config: pytest.Config) -> None:

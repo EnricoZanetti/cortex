@@ -1,9 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatEvent, ChatModel, Citation, chatHealth, listChatModels, streamChat } from "../../lib/api";
+import { useAuth } from "../../lib/auth-context";
+import { getStoredApiKey } from "../settings/page";
 
 /** One tool invocation, shown inline so the user sees the agent's reasoning path. */
 interface ToolActivity {
@@ -71,6 +75,8 @@ const SPECIFIC_SUGGESTIONS: Suggestion[] = [
 ];
 
 export default function ChatPage() {
+  const { user, loading: authLoading, refresh: refreshUser } = useAuth();
+  const router = useRouter();
   const [models, setModels] = useState<ChatModel[]>([]);
   const [model, setModel] = useState<string>("");
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -82,6 +88,10 @@ export default function ChatPage() {
   const [kbReady, setKbReady] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!authLoading && !user) router.push("/login");
+  }, [authLoading, user, router]);
 
   useEffect(() => {
     listChatModels()
@@ -167,7 +177,8 @@ export default function ChatPage() {
         );
 
       try {
-        for await (const event of streamChat(model, history, controller.signal)) {
+        const apiKey = getStoredApiKey();
+        for await (const event of streamChat(model, history, apiKey, controller.signal)) {
           applyEvent(event, patch);
         }
       } catch (error) {
@@ -177,9 +188,10 @@ export default function ChatPage() {
       } finally {
         setBusy(false);
         abortRef.current = null;
+        void refreshUser();
       }
     },
-    [busy, model, turns, kbReady],
+    [busy, model, turns, kbReady, refreshUser],
   );
 
   function stop() {
@@ -187,11 +199,21 @@ export default function ChatPage() {
     setBusy(false);
   }
 
+  if (authLoading || !user) return null;
+
+  const quotaExhausted =
+    user.role !== "admin" && user.free_runs_remaining <= 0 && !getStoredApiKey();
+
   return (
     <section className="panel chat-panel">
       <div className="toolbar">
         <h2 style={{ margin: 0 }}>Ask Cortex</h2>
         <div>
+          {user.role !== "admin" && (
+            <span className="muted" style={{ marginRight: 12 }}>
+              {user.free_runs_remaining} free turn(s) left
+            </span>
+          )}
           <label htmlFor="model" style={{ display: "inline", marginRight: 8 }}>
             Model
           </label>
@@ -212,6 +234,12 @@ export default function ChatPage() {
         </div>
       </div>
 
+      {quotaExhausted && (
+        <div className="notice error">
+          Your free trial turns are used up. <Link href="/settings">Add your own API key</Link> in
+          Settings to keep chatting.
+        </div>
+      )}
       {!kbReady && (
         <div className="notice ok">Getting things ready, this can take up to a minute…</div>
       )}
@@ -241,7 +269,7 @@ export default function ChatPage() {
                   className="secondary"
                   title={suggestion.hint}
                   onClick={() => void send(suggestion.question)}
-                  disabled={busy || !kbReady || availableModels.length === 0}
+                  disabled={busy || !kbReady || availableModels.length === 0 || quotaExhausted}
                 >
                   {suggestion.question}
                 </button>
@@ -258,7 +286,7 @@ export default function ChatPage() {
                   className="secondary"
                   title={suggestion.hint}
                   onClick={() => void send(suggestion.question)}
-                  disabled={busy || !kbReady || availableModels.length === 0}
+                  disabled={busy || !kbReady || availableModels.length === 0 || quotaExhausted}
                 >
                   {suggestion.question}
                 </button>
@@ -329,7 +357,7 @@ export default function ChatPage() {
           value={input}
           placeholder="Ask about a policy, a process, or a product…"
           onChange={(event) => setInput(event.target.value)}
-          disabled={busy || !kbReady || availableModels.length === 0}
+          disabled={busy || !kbReady || availableModels.length === 0 || quotaExhausted}
         />
         {busy ? (
           <button type="button" className="secondary" onClick={stop}>

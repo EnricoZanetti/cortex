@@ -45,6 +45,11 @@ services:
       QDRANT_URL: http://qdrant:6333
       QDRANT_COLLECTION: ${QDRANT_COLLECTION:-kb_chunks}
       MCP_API_KEY: ${MCP_API_KEY:?MCP_API_KEY must be set in .env}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set in .env}
+      JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-10080}
+      FREE_RUNS_PER_USER: ${FREE_RUNS_PER_USER:-3}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       # Optional: only required when EMBEDDING_PROVIDER=openai, which the app enforces.
       # Also serves the OpenAI chat models.
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

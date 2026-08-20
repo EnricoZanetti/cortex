@@ -11,10 +11,10 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
-from sqlalchemy import CursorResult, Select, delete, func, select
+from sqlalchemy import CursorResult, Select, delete, func, select, update
 from sqlalchemy.orm import Session
 
-from kb.db.models import Chunk, Document, DocumentStatus, Tag, document_tags
+from kb.db.models import Chunk, Document, DocumentStatus, Tag, User, UserRole, document_tags
 
 
 def normalize_tag(raw: str) -> str:
@@ -292,3 +292,73 @@ class DocumentRepository:
                 return []
             stmt = stmt.where(Chunk.document_id.in_(document_ids))
         return [(row[0], float(row[1])) for row in self.session.execute(stmt)]
+
+
+class UserRepository:
+    """Reads and writes on chat logins."""
+
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def get_by_id(self, user_id: uuid.UUID) -> User | None:
+        return self.session.get(User, user_id)
+
+    def get_by_email(self, email: str) -> User | None:
+        return self.session.scalar(select(User).where(User.email == email.strip().lower()))
+
+    def get_by_username(self, username: str) -> User | None:
+        return self.session.scalar(select(User).where(User.username == username.strip()))
+
+    def create(
+        self, *, email: str, username: str, password_hash: str, free_runs_remaining: int
+    ) -> User:
+        user = User(
+            email=email.strip().lower(),
+            username=username.strip(),
+            password_hash=password_hash,
+            role=UserRole.USER,
+            free_runs_remaining=free_runs_remaining,
+        )
+        self.session.add(user)
+        self.session.flush()
+        return user
+
+    def decrement_free_run(self, user_id: uuid.UUID) -> bool:
+        """Atomically spend one free run. Returns False if none were left.
+
+        A conditional ``UPDATE ... WHERE free_runs_remaining > 0`` rather than a
+        read-then-write: two concurrent requests from the same user can never both
+        observe a positive count and drive it negative.
+        """
+        stmt = (
+            update(User)
+            .where(User.id == user_id, User.free_runs_remaining > 0)
+            .values(free_runs_remaining=User.free_runs_remaining - 1)
+        )
+        result = cast("CursorResult[Any]", self.session.execute(stmt))
+        return bool(result.rowcount)
+
+    def upsert_admin(self, *, email: str, username: str, password_hash: str) -> User:
+        """Create or update the single bootstrapped admin account.
+
+        Idempotent by design: safe to call on every API startup, and a changed
+        ``ADMIN_PASSWORD`` rotates the stored hash on the next restart.
+        """
+        normalized_email = email.strip().lower()
+        existing = self.get_by_email(normalized_email)
+        if existing is not None:
+            existing.username = username.strip()
+            existing.password_hash = password_hash
+            existing.role = UserRole.ADMIN
+            self.session.flush()
+            return existing
+        user = User(
+            email=normalized_email,
+            username=username.strip(),
+            password_hash=password_hash,
+            role=UserRole.ADMIN,
+            free_runs_remaining=0,
+        )
+        self.session.add(user)
+        self.session.flush()
+        return user

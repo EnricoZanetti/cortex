@@ -15,8 +15,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from kb.api.deps import get_vector_store
-from kb.api.routers import chat, documents, health, tags
+from kb.api.routers import auth, chat, documents, health, tags
 from kb.api.schemas import ErrorOut
+from kb.auth.bootstrap import upsert_admin_user
 from kb.config import get_settings
 from kb.logging import configure_logging, get_logger
 
@@ -31,6 +32,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         get_vector_store().ensure_collection()
     except Exception as exc:  # pragma: no cover - startup ordering in compose
         logger.warning("vector_store_unavailable_at_startup", error=str(exc))
+    try:
+        upsert_admin_user()
+    except Exception as exc:  # pragma: no cover - startup ordering in compose
+        logger.warning("admin_bootstrap_failed", error=str(exc))
     logger.info("api_started")
     yield
 
@@ -56,6 +61,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health.router)
+    app.include_router(auth.router)
     app.include_router(documents.router)
     app.include_router(tags.router)
     app.include_router(chat.router)

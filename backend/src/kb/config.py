@@ -110,6 +110,27 @@ class Settings(BaseSettings):
         ),
     )
 
+    # --- Auth ----------------------------------------------------------------------
+    jwt_secret_key: SecretStr = Field(description="Required: signs and verifies login JWTs.")
+    jwt_algorithm: str = Field(default="HS256")
+    jwt_expires_minutes: int = Field(
+        default=60 * 24 * 7, ge=5, description="Login session lifetime; default is 7 days."
+    )
+    free_runs_per_user: int = Field(
+        default=3,
+        ge=0,
+        description="Free /chat turns a new signup gets on the operator's own provider keys.",
+    )
+    admin_email: SecretStr | None = Field(
+        default=None,
+        description=(
+            "Paired with admin_password: upserted into the users table on API startup as "
+            "an admin login, so the operator can hand out one account with unlimited free "
+            "runs on their own keys. Leave both unset to skip admin bootstrap."
+        ),
+    )
+    admin_password: SecretStr | None = Field(default=None)
+
     # --- MCP server --------------------------------------------------------------
     mcp_api_key: SecretStr = Field(description="Required: bearer token clients must present.")
     mcp_path: str = Field(default="/mcp")
@@ -194,6 +215,8 @@ class Settings(BaseSettings):
                 "OPENAI_API_KEY is required when EMBEDDING_PROVIDER='openai'. "
                 "Set EMBEDDING_PROVIDER=hash to run without an API key."
             )
+        if bool(self.admin_email) != bool(self.admin_password):
+            raise ValueError("ADMIN_EMAIL and ADMIN_PASSWORD must be set together, or not at all.")
         return self
 
 

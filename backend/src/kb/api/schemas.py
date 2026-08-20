@@ -7,7 +7,7 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from kb.db.models import Document, DocumentStatus
+from kb.db.models import Document, DocumentStatus, User, UserRole
 
 
 class TagOut(BaseModel):
@@ -139,3 +139,33 @@ class ChatHealthOut(BaseModel):
     mcp_server_url: str
     tools: list[str]
     models_available: int
+
+
+class UserOut(BaseModel):
+    """The logged-in user, and how much free trial usage they have left."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: str
+    username: str
+    role: UserRole
+    free_runs_remaining: int
+
+    @classmethod
+    def from_user(cls, user: User) -> UserOut:
+        return cls(
+            id=user.id,
+            email=user.email,
+            username=user.username,
+            role=user.role,
+            free_runs_remaining=user.free_runs_remaining,
+        )
+
+
+class AuthOut(BaseModel):
+    """Response to signup/login: the bearer token plus the user it belongs to."""
+
+    access_token: str
+    token_type: str = "bearer"
+    user: UserOut
